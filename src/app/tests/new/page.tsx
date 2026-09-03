@@ -129,6 +129,67 @@ const STEPS = [
   { label: 'Result', short: '6' },
 ];
 
+// ─────────────────────────────────────────────────────────────
+// DRAFT AUTO-SAVE (refresh-safe resume)
+//
+// A half-completed test (non-submitted) is persisted to localStorage with a
+// short debounce so a browser refresh / accidental navigation never wipes out
+// instrument, environmental, selection or observation data. The draft is
+// cleared on successful submit or explicit "Discard & start fresh".
+// ─────────────────────────────────────────────────────────────
+
+const WIZARD_DRAFT_KEY = 'nawi_new_test_wizard_draft_v1';
+
+interface WizardDraft {
+  step: number;
+  completed: number[];
+  instrument: InstrumentData;
+  conditions: ConditionData;
+  tests: TestSelection[];
+  observations: ObservationEntry[];
+  savedAt: number;
+}
+
+function isDraftMeaningful(d: WizardDraft): boolean {
+  return (
+    d.step > 0 ||
+    d.observations.length > 0 ||
+    !!(d.instrument?.model || '').trim() ||
+    !!(d.instrument?.serialNumber || '').trim()
+  );
+}
+
+function loadWizardDraft(): WizardDraft | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem(WIZARD_DRAFT_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as WizardDraft;
+    if (!parsed || typeof parsed !== 'object') return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function saveWizardDraft(d: WizardDraft): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(WIZARD_DRAFT_KEY, JSON.stringify(d));
+  } catch {
+    /* storage full / private mode — autosave is best-effort */
+  }
+}
+
+function clearWizardDraft(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.removeItem(WIZARD_DRAFT_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
 function StepIndicator({ current, completed }: { current: number; completed: number[] }) {
   return (
     <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto pb-2">
@@ -211,6 +272,62 @@ export default function NewTestPage() {
   const [serialTarget, setSerialTarget] = useState<{ oi: number; vi: number; label: string } | null>(null);
   const calculatedRef = useRef<number>(-1);
 
+  // ── Draft auto-save: restore a half-completed test after refresh / navigation ──
+  const [draftSavedAt, setDraftSavedAt] = useState<number | null>(null);
+  const draftRestoredRef = useRef<boolean>(false);
+
+  // Restore once on mount
+  useEffect(() => {
+    if (draftRestoredRef.current) return;
+    const draft = loadWizardDraft();
+    if (draft && isDraftMeaningful(draft)) {
+      draftRestoredRef.current = true;
+      if (typeof draft.step === 'number' && draft.step >= 0 && draft.step < STEPS.length) {
+        setStep(draft.step);
+      }
+      if (Array.isArray(draft.completed)) setCompleted(draft.completed);
+      if (draft.instrument) setInstrument({ ...INITIAL_INSTRUMENT, ...draft.instrument });
+      if (draft.conditions) setConditions({ ...INITIAL_CONDITIONS, ...draft.conditions });
+      if (Array.isArray(draft.tests) && draft.tests.length > 0) setTests(draft.tests);
+      if (Array.isArray(draft.observations)) setObservations(draft.observations);
+      setDraftSavedAt(draft.savedAt || Date.now());
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Autosave with a short debounce whenever wizard state changes
+  useEffect(() => {
+    if (submittedTest) return;
+    const timer = window.setTimeout(() => {
+      const draft: WizardDraft = {
+        step,
+        completed,
+        instrument,
+        conditions,
+        tests,
+        observations,
+        savedAt: Date.now(),
+      };
+      if (isDraftMeaningful(draft)) {
+        saveWizardDraft(draft);
+        setDraftSavedAt(draft.savedAt);
+      }
+    }, 700);
+    return () => window.clearTimeout(timer);
+  }, [step, completed, instrument, conditions, tests, observations, submittedTest]);
+
+  const discardDraft = () => {
+    clearWizardDraft();
+    setDraftSavedAt(null);
+    setStep(0);
+    setCompleted([]);
+    setInstrument({ ...INITIAL_INSTRUMENT });
+    setConditions({ ...INITIAL_CONDITIONS });
+    setTests(AVAILABLE_TESTS.map(t => ({ ...t })));
+    setObservations([]);
+    setCalcResult(null);
+  };
+
   const handleSubmitForReview = () => {
     const formattedObs = observations.map((obs, i) => {
       const calc = calcResult?.[i];
@@ -252,6 +369,9 @@ export default function NewTestPage() {
     });
 
     setSubmittedTest(newTest);
+    // Submitted — the draft is no longer needed
+    clearWizardDraft();
+    setDraftSavedAt(null);
   };
 
   // Rule-based explanations (Tier 1 — no AI, computed from the actual
@@ -321,6 +441,8 @@ export default function NewTestPage() {
     setConditions({ ...INITIAL_CONDITIONS });
     setTests(AVAILABLE_TESTS.map(t => ({ ...t, selected: t.code === 'RPT' })));
     setObservations([]);
+    clearWizardDraft();
+    setDraftSavedAt(null);
   };
 
   const next = () => {
@@ -485,6 +607,24 @@ export default function NewTestPage() {
           </button>
         </div>
       </div>
+
+      {/* Draft auto-save indicator */}
+      {draftSavedAt && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3 px-4 py-2.5 bg-amber-50 border border-amber-200 rounded-sm text-[12px] text-amber-900">
+          <span className="flex items-center gap-1.5 font-medium">
+            💾 Draft auto-saved · refresh-safe
+            <span className="text-amber-700/90 font-normal">
+              (last saved {new Date(draftSavedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})
+            </span>
+          </span>
+          <button
+            onClick={discardDraft}
+            className="underline hover:text-amber-950 font-medium cursor-pointer self-start sm:self-auto"
+          >
+            Discard & start fresh
+          </button>
+        </div>
+      )}
 
       {/* Step indicator */}
       <div className="bg-white border border-gray-200 rounded-sm px-4 py-3 mb-4">
