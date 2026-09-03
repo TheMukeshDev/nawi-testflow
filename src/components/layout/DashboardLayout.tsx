@@ -15,6 +15,7 @@ import { Sidebar } from './Sidebar';
 import { MobileNav } from './MobileNav';
 import { TopBar } from './TopBar';
 import { OfflineSyncBanner } from './OfflineSyncBanner';
+import { setDashboardSearch } from './DashboardSearchContext';
 import { workflowStore } from '@/lib/workflow-store';
 import type { BreadcrumbItem } from '@/types';
 
@@ -31,6 +32,8 @@ export function DashboardLayout({ children, breadcrumbs = [], onSelectTest }: Da
 
   useEffect(() => {
     workflowStore.syncFromSupabase();
+    // Each dashboard page starts with a clean shared search box
+    setDashboardSearch('');
   }, []);
 
   if (isLoading) {

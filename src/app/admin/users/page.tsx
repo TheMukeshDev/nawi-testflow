@@ -9,8 +9,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { useDashboardSearch, setDashboardSearch } from '@/components/layout/DashboardSearchContext';
 import { RouteGuard } from '@/components/auth/RouteGuard';
 import { Badge } from '@/components/ui/Badge';
+import { rowMatchesQuery } from '@/lib/search';
 import { Button } from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/FormControls';
 import { Dialog } from '@/components/ui/Dialog';
@@ -115,7 +117,8 @@ type ModalMode = 'add' | 'edit';
 
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<UserRecord[]>(MOCK_USERS);
-  const [search, setSearch] = useState('');
+  // Shared live search — bound to the TopBar header search
+  const search = useDashboardSearch();
   const [roleFilter, setRoleFilter] = useState('all');
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<ModalMode>('add');
@@ -133,11 +136,8 @@ export default function AdminUsersPage() {
   }, []);
 
   const filteredUsers = users.filter(u => {
-    const matchSearch = !search ||
-      u.fullName.toLowerCase().includes(search.toLowerCase()) ||
-      u.email.toLowerCase().includes(search.toLowerCase());
     const matchRole = roleFilter === 'all' || u.role === roleFilter;
-    return matchSearch && matchRole;
+    return matchRole && rowMatchesQuery(u, search);
   });
 
   const openAddModal = () => {
@@ -259,7 +259,7 @@ export default function AdminUsersPage() {
           <input
             type="text"
             value={search}
-            onChange={e => setSearch(e.target.value)}
+            onChange={e => setDashboardSearch(e.target.value)}
             placeholder="Search by name or email..."
             className="flex-1 min-w-[200px] max-w-[300px] h-[34px] px-3 border border-gray-300 rounded-sm text-[13px] text-gray-900 font-mono focus:outline-none focus:border-[#1e3a5f] focus:ring-1 focus:ring-blue-200"
           />

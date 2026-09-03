@@ -14,7 +14,9 @@ import { cn } from '@/lib/utils';
 import type { BreadcrumbItem } from '@/types';
 
 import { NotificationDropdown } from './NotificationDropdown';
+import { useDashboardSearch, setDashboardSearch } from './DashboardSearchContext';
 import { useOfflineSync } from '@/lib/offline-sync';
+import { useAuth } from '@/lib/auth-context';
 
 interface TopBarProps {
   breadcrumbs?: BreadcrumbItem[];
@@ -23,9 +25,14 @@ interface TopBarProps {
 }
 
 export function TopBar({ breadcrumbs = [], onMenuToggle, onSelectTest }: TopBarProps) {
-  const [searchQuery, setSearchQuery] = React.useState('');
+  // Global header search — shared with the page content below via the store,
+  // so typing here live-filters every section on the current dashboard.
+  const searchQuery = useDashboardSearch();
   const [searchFocused, setSearchFocused] = React.useState(false);
   const { isOnline, pendingCount } = useOfflineSync();
+  const { userRole } = useAuth();
+  // Only roles that run tests may start a new test from the header.
+  const canCreateTests = userRole === 'admin' || userRole === 'tester';
 
   return (
     <header className="flex items-center h-[48px] bg-white border-b border-gray-200 px-3 sm:px-4 shrink-0">
@@ -76,15 +83,27 @@ export function TopBar({ breadcrumbs = [], onMenuToggle, onSelectTest }: TopBarP
             <path d="M9.5 9.5L13 13" strokeLinecap="round" />
           </svg>
           <input
-            type="search"
+            type="text"
             value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
+            onChange={e => setDashboardSearch(e.target.value)}
             onFocus={() => setSearchFocused(true)}
             onBlur={() => setSearchFocused(false)}
             placeholder="Search tests, instruments..."
-            className="bg-transparent border-none outline-none text-[12px] text-gray-800 placeholder:text-gray-400 w-[160px] lg:w-[200px]"
+            className="bg-transparent border-none outline-none text-[12px] text-gray-800 placeholder:text-gray-400 w-[150px] lg:w-[190px] min-w-0"
             aria-label="Global search"
           />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setDashboardSearch('')}
+              aria-label="Clear search"
+              className="w-[18px] h-[18px] flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-200 rounded-full transition-colors cursor-pointer shrink-0"
+            >
+              <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                <path d="M2.5 2.5l7 7M9.5 2.5l-7 7" />
+              </svg>
+            </button>
+          )}
           <kbd className="hidden lg:inline-flex items-center h-[18px] px-1 text-[10px] font-medium text-gray-400 bg-gray-100 border border-gray-200 rounded">
             ⌘K
           </kbd>
@@ -110,16 +129,18 @@ export function TopBar({ breadcrumbs = [], onMenuToggle, onSelectTest }: TopBarP
         <NotificationDropdown onSelectTest={onSelectTest} />
       </div>
 
-      {/* New Test */}
-      <Link
-        href="/tests/new"
-        className="flex items-center gap-1.5 h-[30px] px-2.5 rounded-sm bg-[#1e3a5f] text-white text-[12px] font-medium hover:bg-[#162d4a] transition-colors"
-      >
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-          <path d="M6 2v8M2 6h8" />
-        </svg>
-        <span className="hidden sm:inline">New Test</span>
-      </Link>
+      {/* New Test — only tester/admin roles can create tests */}
+      {canCreateTests && (
+        <Link
+          href="/tests/new"
+          className="flex items-center gap-1.5 h-[30px] px-2.5 rounded-sm bg-[#1e3a5f] text-white text-[12px] font-medium hover:bg-[#162d4a] transition-colors"
+        >
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <path d="M6 2v8M2 6h8" />
+          </svg>
+          <span className="hidden sm:inline">New Test</span>
+        </Link>
+      )}
     </header>
   );
 }

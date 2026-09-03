@@ -12,6 +12,8 @@ import React, { useState, useEffect } from 'react';
 import { Shell } from '@/components/layout/Shell';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { workflowStore, type StoredTest, type StoredReport, type WorkflowHistoryEntry } from '@/lib/workflow-store';
+import { deepSearch, rowMatchesQuery } from '@/lib/search';
+import { useDashboardSearch, setDashboardSearch } from '@/components/layout/DashboardSearchContext';
 import { TestResultModal } from '@/components/workflow/TestResultModal';
 import { TestStatusBadge } from '@/components/ui/StatusBadge';
 
@@ -20,7 +22,8 @@ export default function RepositoryPage() {
   const [history, setHistory] = useState<WorkflowHistoryEntry[]>([]);
   const [tests, setTests] = useState<StoredTest[]>([]);
   const [reports, setReports] = useState<StoredReport[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
+  // Shared live search — bound to the TopBar header search
+  const searchQuery = useDashboardSearch();
   const [selectedActionFilter, setSelectedActionFilter] = useState('all');
   const [selectedTest, setSelectedTest] = useState<StoredTest | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -37,14 +40,11 @@ export default function RepositoryPage() {
     return () => unsub();
   }, []);
 
-  // Filter history entries
+  // Deep search across ALL fields (nested, numbers, null-safe) — applied per tab
+  const filteredTests = deepSearch(tests, searchQuery);
   const filteredHistory = history.filter(item => {
-    const matchesSearch =
-      item.testNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.actorName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (item.notes || '').toLowerCase().includes(searchQuery.toLowerCase());
     const matchesAction = selectedActionFilter === 'all' || item.action === selectedActionFilter;
-    return matchesSearch && matchesAction;
+    return matchesAction && rowMatchesQuery(item, searchQuery);
   });
 
   const getActionBadge = (action: WorkflowHistoryEntry['action']) => {
@@ -107,8 +107,8 @@ export default function RepositoryPage() {
           <input
             type="text"
             value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            placeholder="Search by test reference number, officer name, or remarks..."
+            onChange={e => setDashboardSearch(e.target.value)}
+            placeholder="Search by test ref, model, serial number, lab, officer, status, remarks…"
             className="w-full h-[36px] pl-9 pr-3 border border-gray-300 rounded text-[13px] text-gray-900 focus:outline-none focus:border-[#1e3a5f]"
           />
           <svg
@@ -224,7 +224,15 @@ export default function RepositoryPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {tests.map((t) => (
+              {filteredTests.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-12 text-center text-gray-400 text-[13px]">
+                    {searchQuery.trim()
+                      ? `No records match "${searchQuery.trim()}"`
+                      : 'No test records in the repository yet.'}
+                  </td>
+                </tr>
+              ) : filteredTests.map((t) => (
                 <tr key={t.id} className="hover:bg-blue-50/20 transition-colors">
                   <td className="py-2.5 px-3 font-mono font-bold text-[#1e3a5f]">
                     {t.testNumber}

@@ -16,10 +16,13 @@ import Link from 'next/link';
 import { Shell } from '@/components/layout/Shell';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { DataTable, TableFilters, type ColumnDef } from '@/components/ui/DataTable';
+import { deepSearch } from '@/lib/search';
+import { useDashboardSearch, setDashboardSearch } from '@/components/layout/DashboardSearchContext';
 import { Button } from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/FormControls';
 import { Badge } from '@/components/ui/Badge';
 import { NoResults } from '@/components/ui/EmptyState';
+import { useAuth } from '@/lib/auth-context';
 
 // ============================================================================
 // TYPES
@@ -200,7 +203,11 @@ function cn(...classes: (string | boolean | undefined | null)[]) {
 // ============================================================================
 
 export default function LaboratoriesPage() {
-  const [searchQuery, setSearchQuery] = React.useState('');
+  // Shared live search — bound to the TopBar header search
+  const searchQuery = useDashboardSearch();
+  // Only admin registers laboratories
+  const { hasPermission } = useAuth();
+  const canRegisterLaboratory = hasPermission('laboratories:create');
   const [statusFilter, setStatusFilter] = React.useState('all');
   const [sort, setSort] = React.useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'code', direction: 'asc' });
   const [page, setPage] = React.useState(1);
@@ -210,15 +217,9 @@ export default function LaboratoriesPage() {
   const filteredData = React.useMemo(() => {
     let result = [...MOCK_LABS];
 
-    // Search filter
+    // Deep search: any field, nested values, numbers — null-safe
     if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      result = result.filter(row =>
-        row.name.toLowerCase().includes(query) ||
-        row.code.toLowerCase().includes(query) ||
-        row.city.toLowerCase().includes(query) ||
-        row.accreditationNumber.toLowerCase().includes(query)
-      );
+      result = deepSearch(result, searchQuery);
     }
 
     // Status filter
@@ -248,9 +249,11 @@ export default function LaboratoriesPage() {
         title="Laboratories"
         subtitle="Testing laboratory facilities and accreditation information"
         actions={
-          <Link href="/laboratories/new">
-            <Button variant="primary" size="md">Register Laboratory</Button>
-          </Link>
+          canRegisterLaboratory ? (
+            <Link href="/laboratories/new">
+              <Button variant="primary" size="md">Register Laboratory</Button>
+            </Link>
+          ) : undefined
         }
       />
 
@@ -261,7 +264,7 @@ export default function LaboratoriesPage() {
             label=""
             placeholder="Search name, code, city, accreditation…"
             value={searchQuery}
-            onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
+            onChange={(e) => { setDashboardSearch(e.target.value); setPage(1); }}
             className="flex-1 min-w-[250px]"
           />
           <Select
@@ -298,7 +301,7 @@ export default function LaboratoriesPage() {
         emptyState={
           <NoResults
             onClearFilters={() => {
-              setSearchQuery('');
+              setDashboardSearch('');
               setStatusFilter('all');
             }}
           />

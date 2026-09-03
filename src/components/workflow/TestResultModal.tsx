@@ -8,11 +8,12 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/Button';
 import { TestStatusBadge, ComplianceBadge } from '@/components/ui/StatusBadge';
 import { downloadTestReportPDF, downloadTestReportDOCX, printTestReport } from '@/lib/report-generator';
 import { workflowStore, type StoredTest, type StoredReport } from '@/lib/workflow-store';
+import { useAuth } from '@/lib/auth-context';
 import { DocaPortalModal } from './DocaPortalModal';
 import { EditTestModal } from './EditTestModal';
 
@@ -40,8 +41,40 @@ export function TestResultModal({
   const [showDisapproveInput, setShowDisapproveInput] = useState(false);
   const [disapproveReason, setDisapproveReason] = useState('');
   const [showEditModal, setShowEditModal] = useState(false);
+  // Observation codes the reviewer flags for correction (field-level remarks).
+  const [flaggedCodes, setFlaggedCodes] = useState<string[]>([]);
+  const { userRole } = useAuth();
+
+  // ── Role-based rights on this surface ───────────────────────────────────
+  // Reviewer: decide (approve / request revision / revoke) but never generate
+  // or export report files. Viewer: read-only (finalized PDF retrieval only).
+  // Tester: full export of their reports. Admin: everything.
+  const canDecideReview = userRole === 'reviewer' || userRole === 'admin';
+  const canEditResubmit = userRole === 'tester' || userRole === 'admin';
+  const canDownloadPdf = userRole === 'admin' || userRole === 'tester' || userRole === 'viewer';
+  const canExportDocxOrPrint = userRole === 'admin' || userRole === 'tester';
+  const isAdmin = userRole === 'admin';
+
+  // Reset per-test transient state whenever a (new) record is opened.
+  useEffect(() => {
+    if (open && test) {
+      setReviewNotes('');
+      setFlaggedCodes([]);
+      setDisapproveReason('');
+      setShowDisapproveInput(false);
+    }
+  }, [open, test]);
 
   if (!open || !test) return null;
+
+  // True while the reviewer is actively deciding on a pending report.
+  const isReviewing = canDecideReview && mode === 'review' && test.status === 'pending-review';
+
+  const toggleFlag = (code: string) => {
+    setFlaggedCodes(prev =>
+      prev.includes(code) ? prev.filter(c => c !== code) : [...prev, code]
+    );
+  };
 
   const handleApprove = () => {
     setIsSubmitting(true);
@@ -60,7 +93,7 @@ export function TestResultModal({
     }
     setIsSubmitting(true);
     setTimeout(() => {
-      workflowStore.rejectTest(test.id, 'Dr. K. Sharma', reviewNotes);
+      workflowStore.rejectTest(test.id, 'Dr. K. Sharma', reviewNotes, flaggedCodes);
       setIsSubmitting(false);
       setActionSuccess('rejected');
       if (onActionComplete) onActionComplete();
@@ -121,7 +154,7 @@ export function TestResultModal({
           }`}>
             <span>
               {actionSuccess === 'approved'
-                ? 'Test report approved successfully! Finalized report is ready to download.'
+                ? 'Test report approved — certificate finalized and issued.'
                 : 'Revision requested. Tester has been notified.'}
             </span>
             <button
@@ -198,6 +231,9 @@ export function TestResultModal({
                 <table className="w-full text-[12px]">
                   <thead>
                     <tr className="border-b border-gray-200 bg-gray-50 text-gray-600 text-[11px] uppercase tracking-wider">
+                      {isReviewing && (
+                        <th className="py-2 px-2 text-center font-semibold w-[64px]">Flag</th>
+                      )}
                       <th className="py-2 px-2 text-left font-semibold">Test Procedure</th>
                       <th className="py-2 px-2 text-left font-semibold">Code</th>
                       <th className="py-2 px-2 text-left font-semibold">Readings</th>
@@ -207,24 +243,41 @@ export function TestResultModal({
                     </tr>
                   </thead>
                   <tbody>
-                    {test.observations.map((obs, idx) => (
-                      <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50/60">
-                        <td className="py-2 px-2 font-medium text-gray-900">{obs.testName}</td>
-                        <td className="py-2 px-2 font-mono text-gray-500">{obs.testCode}</td>
-                        <td className="py-2 px-2 font-mono text-gray-700">{obs.readings.join(', ')} {obs.unit}</td>
-                        <td className="py-2 px-2 font-mono text-right font-bold text-gray-900">{obs.mean} {obs.unit}</td>
-                        <td className="py-2 px-2 font-mono text-right text-gray-600">{obs.stddev} {obs.unit}</td>
-                        <td className="py-2 px-2 text-center">
-                          <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                            obs.verdict === 'PASS'
-                              ? 'bg-green-50 text-green-700 border border-green-200'
-                              : 'bg-red-50 text-red-700 border border-red-200'
-                          }`}>
-                            {obs.verdict}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
+                    {test.observations.map((obs, idx) => {
+                      const isFlagged = flaggedCodes.includes(obs.testCode);
+                      return (
+                        <tr key={idx} className={`border-b border-gray-100 hover:bg-gray-50/60 transition-colors ${
+                          isReviewing && isFlagged ? 'bg-amber-50 border-amber-300' : ''
+                        }`}>
+                          {isReviewing && (
+                            <td className="py-2 px-2 text-center">
+                              <input
+                                type="checkbox"
+                                checked={isFlagged}
+                                onChange={() => toggleFlag(obs.testCode)}
+                                title="Flag this observation point for correction"
+                                aria-label={`Flag ${obs.testCode} for correction`}
+                                className="accent-[#1e3a5f] w-[15px] h-[15px] cursor-pointer"
+                              />
+                            </td>
+                          )}
+                          <td className="py-2 px-2 font-medium text-gray-900">{obs.testName}</td>
+                          <td className="py-2 px-2 font-mono text-gray-500">{obs.testCode}</td>
+                          <td className="py-2 px-2 font-mono text-gray-700">{obs.readings.join(', ')} {obs.unit}</td>
+                          <td className="py-2 px-2 font-mono text-right font-bold text-gray-900">{obs.mean} {obs.unit}</td>
+                          <td className="py-2 px-2 font-mono text-right text-gray-600">{obs.stddev} {obs.unit}</td>
+                          <td className="py-2 px-2 text-center">
+                            <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                              obs.verdict === 'PASS'
+                                ? 'bg-green-50 text-green-700 border border-green-200'
+                                : 'bg-red-50 text-red-700 border border-red-200'
+                            }`}>
+                              {obs.verdict}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -232,12 +285,46 @@ export function TestResultModal({
           </div>
 
           {/* Reviewer remarks / Review Mode form */}
-          {mode === 'review' && test.status === 'pending-review' ? (
+          {canDecideReview && mode === 'review' && test.status === 'pending-review' ? (
             <div className="border-2 border-primary-200 bg-blue-50/40 rounded-sm p-4">
               <h3 className="text-[13px] font-bold text-gray-900 mb-2">Reviewer Verification & Approval Decision</h3>
-              <p className="text-[12px] text-gray-600 mb-3">
-                Review all test points against OIML R-76 standards. Enter verification remarks and choose an action:
+
+              {/* Re-Review context — tester already fixed a previous return */}
+              {test.revisionCount ? (
+                <div className="mb-3 border border-amber-300 bg-amber-50 rounded-sm p-3 text-[12px]">
+                  <div className="font-bold text-amber-900 mb-1 flex items-center gap-1.5">
+                    <span>⟳</span> Re-Review &mdash; Round {(test.revisionCount || 0) + 1} of this report
+                  </div>
+                  <p className="text-amber-800 leading-relaxed">
+                    Previously returned by <strong>{test.reviewer || 'Reviewer'}</strong>
+                    {test.returnedAt ? <> on {new Date(test.returnedAt).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</> : null}
+                    {test.reviewNotes ? <>: &ldquo;{test.reviewNotes}&rdquo;</> : '.'}
+                  </p>
+                  {test.testerResolutionNote && (
+                    <p className="text-amber-900 mt-1 leading-relaxed">
+                      <span className="font-semibold">Tester&rsquo;s correction note:</span> {test.testerResolutionNote}
+                    </p>
+                  )}
+                </div>
+              ) : null}
+
+              <p className="text-[12px] text-gray-600 mb-2">
+                Review all test points against OIML R-76 standards. Tick the observation points that need
+                correction (optional) and enter verification remarks. Requesting revision is final and notifies the tester:
               </p>
+
+              {flaggedCodes.length > 0 && (
+                <div className="mb-2 flex items-center gap-2 text-[11px] text-amber-900 bg-amber-100/70 border border-amber-300 rounded px-2.5 py-1.5">
+                  <span className="font-bold">Field-level flags ({flaggedCodes.length}):</span>
+                  {flaggedCodes.map(c => (
+                    <span key={c} className="px-1.5 py-0.5 bg-white border border-amber-400 rounded font-mono text-[10px] font-bold">
+                      {c}
+                    </span>
+                  ))}
+                  <span className="text-amber-800">&mdash; will be highlighted for the tester</span>
+                </div>
+              )}
+
               <textarea
                 value={reviewNotes}
                 onChange={e => setReviewNotes(e.target.value)}
@@ -276,7 +363,7 @@ export function TestResultModal({
               )}
 
               {/* Revision Requested - Action for Tester */}
-              {test.status === 'revision-requested' && (
+              {test.status === 'revision-requested' && canEditResubmit && (
                 <div className="border border-amber-300 bg-amber-50 rounded-sm p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                   <div>
                     <h4 className="text-[13px] font-bold text-amber-900 flex items-center gap-1.5">
@@ -297,8 +384,8 @@ export function TestResultModal({
                 </div>
               )}
 
-              {/* Post-Approval Revocation Control for Completed Tests */}
-              {test.status === 'completed' && (
+              {/* Post-Approval Revocation Control for Completed Tests (reviewer/admin) */}
+              {test.status === 'completed' && canDecideReview && (
                 <div className="border border-red-200 bg-red-50/40 rounded-sm p-4">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                     <div>
@@ -354,43 +441,51 @@ export function TestResultModal({
         {/* Modal Bottom Actions Bar */}
         <div className="flex flex-wrap items-center justify-between gap-2 px-5 py-3.5 bg-gray-50 border-t border-gray-200 shrink-0">
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => downloadTestReportPDF(test, report || undefined)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#1e3a5f] hover:bg-[#162d4a] text-white text-[12px] font-medium rounded transition-colors shadow-xs"
-            >
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <path d="M7 1.5v8m0 0L4 6.5m3 3l3-3M2 11.5h10" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              Download PDF
-            </button>
+            {canDownloadPdf && (
+              <button
+                onClick={() => downloadTestReportPDF(test, report || undefined)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#1e3a5f] hover:bg-[#162d4a] text-white text-[12px] font-medium rounded transition-colors shadow-xs"
+              >
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <path d="M7 1.5v8m0 0L4 6.5m3 3l3-3M2 11.5h10" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                Download PDF
+              </button>
+            )}
 
-            <button
-              onClick={() => downloadTestReportDOCX(test, report || undefined)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-gray-100 text-gray-700 border border-gray-300 text-[12px] font-medium rounded transition-colors"
-            >
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <path d="M2 3h10M2 7h10M2 11h6" strokeLinecap="round" />
-              </svg>
-              Download DOCX
-            </button>
+            {canExportDocxOrPrint && (
+              <button
+                onClick={() => downloadTestReportDOCX(test, report || undefined)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-gray-100 text-gray-700 border border-gray-300 text-[12px] font-medium rounded transition-colors"
+              >
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <path d="M2 3h10M2 7h10M2 11h6" strokeLinecap="round" />
+                </svg>
+                Download DOCX
+              </button>
+            )}
 
-            <button
-              onClick={() => printTestReport(test, report || undefined)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-gray-100 text-gray-700 border border-gray-300 text-[12px] font-medium rounded transition-colors"
-            >
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <path d="M4 5V2h6v3M4 10h6v2H4v-2zM2 6h10v4H2V6z" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              Print
-            </button>
+            {canExportDocxOrPrint && (
+              <button
+                onClick={() => printTestReport(test, report || undefined)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-gray-100 text-gray-700 border border-gray-300 text-[12px] font-medium rounded transition-colors"
+              >
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <path d="M4 5V2h6v3M4 10h6v2H4v-2zM2 6h10v4H2V6z" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                Print
+              </button>
+            )}
 
-            <button
-              onClick={() => setShowDocaModal(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-[12px] font-medium rounded transition-colors shadow-2xs cursor-pointer"
-              title="Push to Ministry of Consumer Affairs National Portal"
-            >
-              <span>🏛️ e-Maap Gateway</span>
-            </button>
+            {isAdmin && (
+              <button
+                onClick={() => setShowDocaModal(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-[12px] font-medium rounded transition-colors shadow-2xs cursor-pointer"
+                title="Push to Ministry of Consumer Affairs National Portal"
+              >
+                <span>🏛️ e-Maap Gateway</span>
+              </button>
+            )}
 
             <a
               href={`/verify/${encodeURIComponent(test.testNumber)}`}

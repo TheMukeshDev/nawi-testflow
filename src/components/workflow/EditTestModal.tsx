@@ -133,6 +133,35 @@ export function EditTestModal({ open, onClose, test, onSaved }: EditTestModalPro
                 <span>⚠️</span> Reviewer / Disapproval Remarks:
               </div>
               <p className="text-red-800 leading-relaxed pl-5">{test.reviewNotes}</p>
+              {test.reviewer && test.returnedAt && (
+                <p className="text-[11px] text-red-700 pl-5 mt-1">
+                  Returned by <strong>{test.reviewer}</strong> on{' '}
+                  {new Date(test.returnedAt).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                  {test.revisionCount ? <> &bull; Revision round {test.revisionCount}</> : null}
+                </p>
+              )}
+
+              {/* Field-level flags: exactly which observation points to fix */}
+              {test.flaggedCodes && test.flaggedCodes.length > 0 && (
+                <div className="mt-2.5 pl-5 border-l-2 border-red-300">
+                  <div className="text-[11px] font-bold text-red-900 mb-1">
+                    🚩 Flagged observation point(s) — fix these before resubmitting:
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {test.flaggedCodes.map(code => {
+                      const obs = (test.observations || []).find(o => o.testCode === code);
+                      return (
+                        <span
+                          key={code}
+                          className="px-2 py-0.5 bg-white border border-red-300 text-red-800 rounded font-mono text-[11px] font-semibold"
+                        >
+                          {code} &mdash; {obs ? obs.testName : 'observation'}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -197,11 +226,23 @@ export function EditTestModal({ open, onClose, test, onSaved }: EditTestModalPro
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
-                    {observations.map((obs, idx) => (
-                      <tr key={idx} className="hover:bg-blue-50/20">
-                        <td className="py-2.5 px-3 font-semibold text-gray-800">
-                          <div>{obs.testName}</div>
+                    {observations.map((obs, idx) => {
+                      const isFlagged = (test.flaggedCodes || []).includes(obs.testCode);
+                      return (
+                      <tr key={idx} className={`hover:bg-blue-50/20 transition-colors ${
+                        isFlagged ? 'bg-amber-50/80' : ''
+                      }`}>
+                        <td className={`py-2.5 px-3 font-semibold text-gray-800 ${isFlagged ? 'border-l-2 border-amber-500' : ''}`}>
+                          <div className="flex items-center gap-1.5">
+                            {isFlagged && <span title="Flagged by reviewer">🚩</span>}
+                            {obs.testName}
+                          </div>
                           <span className="text-[10.5px] font-mono text-gray-400">{obs.testCode}</span>
+                          {isFlagged && (
+                            <div className="text-[10.5px] font-semibold text-amber-800 mt-0.5">
+                              Flagged by reviewer &mdash; re-verify readings before resubmitting
+                            </div>
+                          )}
                         </td>
                         <td className="py-2.5 px-3">
                           <input
@@ -232,7 +273,8 @@ export function EditTestModal({ open, onClose, test, onSaved }: EditTestModalPro
                           </button>
                         </td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

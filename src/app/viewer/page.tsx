@@ -8,15 +8,19 @@
 
 import React, { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { useDashboardSearch, setDashboardSearch } from '@/components/layout/DashboardSearchContext';
 import { RouteGuard } from '@/components/auth/RouteGuard';
 import { workflowStore, type StoredTest, type StoredReport } from '@/lib/workflow-store';
+import { deepSearch } from '@/lib/search';
+import { labNameFor } from '@/lib/laboratories';
 import { TestResultModal } from '@/components/workflow/TestResultModal';
 import { downloadTestReportPDF } from '@/lib/report-generator';
 
 export default function ViewerDashboard() {
   const [reports, setReports] = useState<StoredReport[]>([]);
   const [tests, setTests] = useState<StoredTest[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
+  // Shared live search — bound to the TopBar header search
+  const searchQuery = useDashboardSearch();
   const [selectedTest, setSelectedTest] = useState<StoredTest | null>(null);
   const [selectedReport, setSelectedReport] = useState<StoredReport | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -36,16 +40,8 @@ export default function ViewerDashboard() {
 
   const completedTests = tests.filter(t => t.status === 'completed' || t.status === 'approved');
 
-  const filteredCompleted = completedTests.filter(t => {
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase();
-    return (
-      t.testNumber.toLowerCase().includes(q) ||
-      t.instrumentSerial.toLowerCase().includes(q) ||
-      t.instrumentModel.toLowerCase().includes(q) ||
-      t.laboratory.toLowerCase().includes(q)
-    );
-  });
+  // Deep search: matches ANY field (nested observations, class, verdict, dates…) — null-safe
+  const filteredCompleted = deepSearch(completedTests, searchQuery);
 
   const openViewModal = (test: StoredTest) => {
     const rep = workflowStore.getReportByTestId(test.id);
@@ -89,13 +85,13 @@ export default function ViewerDashboard() {
               <input
                 type="text"
                 value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
+                onChange={e => setDashboardSearch(e.target.value)}
                 placeholder="Search by test number, serial number, model, laboratory..."
                 className="flex-1 h-[36px] px-3 border border-gray-300 rounded text-[13px] text-gray-900 focus:outline-none focus:border-[#1e3a5f] focus:ring-1 focus:ring-blue-200"
               />
               {searchQuery && (
                 <button
-                  onClick={() => setSearchQuery('')}
+                  onClick={() => setDashboardSearch('')}
                   className="px-3 h-[36px] bg-gray-100 hover:bg-gray-200 text-gray-600 text-[12px] font-medium rounded transition-colors cursor-pointer"
                 >
                   Clear
@@ -152,7 +148,12 @@ export default function ViewerDashboard() {
                         <div className="font-medium text-gray-900">{t.instrumentModel}</div>
                         <div className="text-[11px] font-mono text-gray-500">SN: {t.instrumentSerial} &bull; Class {t.instrumentClass}</div>
                       </td>
-                      <td className="px-3 py-2.5 text-gray-700">{t.laboratory}</td>
+                      <td className="px-3 py-2.5">
+                        <div className="text-gray-700">{labNameFor(t.laboratory) || t.laboratory}</div>
+                        {labNameFor(t.laboratory) && (
+                          <div className="text-[11px] font-mono text-gray-400">{t.laboratory}</div>
+                        )}
+                      </td>
                       <td className="px-3 py-2.5 text-gray-700">{t.reviewer || 'Dr. K. Sharma'}</td>
                       <td className="px-3 py-2.5 text-right space-x-2">
                         <button

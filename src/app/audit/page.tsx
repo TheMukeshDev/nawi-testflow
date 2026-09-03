@@ -1,13 +1,16 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Shell } from '@/components/layout/Shell';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { DataTable, type ColumnDef } from '@/components/ui/DataTable';
 import { Badge } from '@/components/ui/Badge';
-import { Input, Select } from '@/components/ui/FormControls';
+import { Select } from '@/components/ui/FormControls';
 import { Button } from '@/components/ui/Button';
+import { SearchInput } from '@/components/ui/SearchInput';
 import { NoResults } from '@/components/ui/EmptyState';
+import { deepSearch } from '@/lib/search';
+import { useDashboardSearch, setDashboardSearch } from '@/components/layout/DashboardSearchContext';
 
 interface AuditRecord {
   id: string;
@@ -123,6 +126,12 @@ const COLUMNS: ColumnDef<AuditRecord>[] = [
 ];
 
 export default function AuditLogPage() {
+  // Shared live search — bound to the TopBar header search
+  const searchQuery = useDashboardSearch();
+
+  // Deep search across every audit field (user, role, action, reference, details, IP…)
+  const filteredAudit = useMemo(() => deepSearch(MOCK_AUDIT, searchQuery), [searchQuery]);
+
   return (
     <Shell breadcrumbs={[{ label: 'Audit Log', current: true }]}>
       <PageHeader
@@ -132,11 +141,13 @@ export default function AuditLogPage() {
 
       {/* ── Filter Bar ── */}
       <div className="panel p-3 mb-3">
-        <div className="flex items-center gap-2">
-          <Input
-            label=""
-            placeholder="Search by user, action, reference…"
-            className="flex-1"
+        <div className="flex flex-wrap items-center gap-2">
+          <SearchInput
+            value={searchQuery}
+            onChange={setDashboardSearch}
+            placeholder="Search by user, role, action, reference, details, IP…"
+            ariaLabel="Search audit log"
+            className="flex-1 min-w-[220px]"
           />
           <Select
             label=""
@@ -156,10 +167,10 @@ export default function AuditLogPage() {
 
       <DataTable
         columns={COLUMNS}
-        data={MOCK_AUDIT}
+        data={filteredAudit}
         rowKey={(row) => row.id}
         sort={{ key: 'timestamp', direction: 'desc' }}
-        pagination={{ page: 1, pageSize: 25, total: MOCK_AUDIT.length }}
+        pagination={{ page: 1, pageSize: 25, total: filteredAudit.length }}
         emptyState={<NoResults />}
         caption="System audit trail"
       />

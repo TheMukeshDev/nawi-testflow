@@ -60,6 +60,17 @@ export interface StoredTest {
   createdAt: string;
   lastUpdated: string;
   reviewNotes?: string;
+  // ── Closed-loop discrepancy / revision cycle tracking ──
+  /** Number of times the reviewer returned this test for revision (0 = never). */
+  revisionCount?: number;
+  /** When the reviewer last returned the test (ISO). */
+  returnedAt?: string;
+  /** When the tester resubmitted after a revision (ISO). */
+  resubmittedAt?: string;
+  /** Tester's mandatory explanation at resubmission. */
+  testerResolutionNote?: string;
+  /** Observation codes (e.g. RPT/ECC) the reviewer explicitly flagged. */
+  flaggedCodes?: string[];
 }
 
 export interface StoredReport {
@@ -556,7 +567,7 @@ export const workflowStore = {
     return test;
   },
 
-  rejectTest(testId: string, reviewerName = 'Dr. K. Sharma', reason = 'Discrepancy observed in test readings.'): StoredTest | undefined {
+  rejectTest(testId: string, reviewerName = 'Dr. K. Sharma', reason = 'Discrepancy observed in test readings.', flaggedCodes: string[] = []): StoredTest | undefined {
     const tests = this.getTests();
     const index = tests.findIndex(t => t.id === testId || t.testNumber === testId);
     if (index === -1) return undefined;
@@ -566,6 +577,11 @@ export const workflowStore = {
     test.status = 'revision-requested';
     test.reviewer = reviewerName;
     test.reviewNotes = reason;
+    test.revisionCount = (test.revisionCount || 0) + 1;
+    test.returnedAt = new Date().toISOString();
+    test.flaggedCodes = flaggedCodes;
+    test.resubmittedAt = undefined;
+    test.testerResolutionNote = undefined;
     test.lastUpdated = new Date().toISOString();
     tests[index] = test;
     saveData(STORAGE_KEYS.TESTS, tests);
@@ -596,9 +612,12 @@ export const workflowStore = {
     });
 
     // Notify Tester
+    const flaggedText = flaggedCodes.length > 0
+      ? ` Flagged observation point(s) to re-check: ${flaggedCodes.join(', ')}.`
+      : '';
     this.addNotification({
       title: 'Revision Requested by Reviewer',
-      message: `${reviewerName} requested revision for ${test.testNumber}: "${reason}".`,
+      message: `${reviewerName} requested revision for ${test.testNumber}: "${reason}".${flaggedText}`,
       type: 'rejection',
       targetRole: 'tester',
       testId: test.id,
@@ -619,6 +638,10 @@ export const workflowStore = {
     test.status = 'revision-requested';
     test.reviewer = reviewerName;
     test.reviewNotes = `[DISAPPROVED] ${reason}`;
+    test.revisionCount = (test.revisionCount || 0) + 1;
+    test.returnedAt = new Date().toISOString();
+    test.resubmittedAt = undefined;
+    test.testerResolutionNote = undefined;
     test.lastUpdated = new Date().toISOString();
     tests[index] = test;
     saveData(STORAGE_KEYS.TESTS, tests);
@@ -688,7 +711,10 @@ export const workflowStore = {
     if (updates.temperature) test.temperature = updates.temperature;
     if (updates.humidity) test.humidity = updates.humidity;
     test.status = 'pending-review';
-    test.reviewNotes = updates.notes ? `Tester notes: ${updates.notes}` : test.reviewNotes;
+    // Keep the reviewer's original remarks for the audit trail; carry the
+    // tester's mandatory explanation as its own field (shown to reviewer).
+    test.testerResolutionNote = updates.notes;
+    test.resubmittedAt = new Date().toISOString();
     test.lastUpdated = new Date().toISOString();
     tests[index] = test;
     saveData(STORAGE_KEYS.TESTS, tests);

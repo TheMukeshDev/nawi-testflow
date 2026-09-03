@@ -55,9 +55,19 @@ export default function TestsPage() {
     downloadTestReportPDF(test);
   };
 
+  // Role-scope the list: viewers only see finalized certificates; reviewers see
+  // everything except in-progress drafts (they act on submitted + finalized records).
+  // Admins and testers see all records.
+  const scopedTests =
+    userRole === 'viewer'
+      ? tests.filter(t => t.status === 'completed' || t.status === 'approved')
+      : userRole === 'reviewer'
+        ? tests.filter(t => t.status !== 'draft' && t.status !== 'in-testing')
+        : tests;
+
   const filteredData = activeFilter === 'all'
-    ? tests
-    : tests.filter(t => t.status === activeFilter);
+    ? scopedTests
+    : scopedTests.filter(t => t.status === activeFilter);
 
   const pagination: PaginationState = {
     page: 1,
@@ -146,7 +156,7 @@ export default function TestsPage() {
               {canReview ? 'Review' : 'View'}
             </button>
 
-            {row.status === 'revision-requested' && (
+            {row.status === 'revision-requested' && (userRole === 'tester' || userRole === 'admin') && (
               <button
                 onClick={() => openTestModal(row, 'view')}
                 className="px-2 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded text-[11px] font-semibold transition-colors cursor-pointer shadow-2xs"
@@ -156,6 +166,7 @@ export default function TestsPage() {
               </button>
             )}
 
+            {userRole !== 'reviewer' && (
             <button
               onClick={(e) => handleDownloadPDF(e, row)}
               className="px-2 py-1 bg-[#1e3a5f] hover:bg-[#162d4a] text-white rounded text-[11px] font-medium transition-colors shadow-2xs cursor-pointer inline-flex items-center gap-1"
@@ -166,6 +177,7 @@ export default function TestsPage() {
               </svg>
               PDF
             </button>
+            )}
           </div>
         );
       },
@@ -184,11 +196,13 @@ export default function TestsPage() {
         title="Tests"
         subtitle="Manage Non-Automatic Weighing Instrument (NAWI) test records per OIML R-76"
         actions={
-          <Link href="/tests/new">
-            <Button variant="primary" size="md">
-              New Test Report
-            </Button>
-          </Link>
+          (userRole === 'admin' || userRole === 'tester') ? (
+            <Link href="/tests/new">
+              <Button variant="primary" size="md">
+                New Test Report
+              </Button>
+            </Link>
+          ) : undefined
         }
       />
 
@@ -197,7 +211,7 @@ export default function TestsPage() {
         <FilterTabs
           tabs={TEST_STATUS_FILTERS.map(f => ({
             ...f,
-            count: f.value === 'all' ? tests.length : tests.filter(t => t.status === f.value).length,
+            count: f.value === 'all' ? scopedTests.length : scopedTests.filter(t => t.status === f.value).length,
           }))}
           active={activeFilter}
           onChange={setActiveFilter}

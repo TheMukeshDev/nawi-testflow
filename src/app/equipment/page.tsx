@@ -16,11 +16,14 @@ import Link from 'next/link';
 import { Shell } from '@/components/layout/Shell';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { DataTable, TableFilters, type ColumnDef } from '@/components/ui/DataTable';
+import { deepSearch } from '@/lib/search';
+import { useDashboardSearch, setDashboardSearch } from '@/components/layout/DashboardSearchContext';
 import { Button } from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/FormControls';
 import { Badge } from '@/components/ui/Badge';
 import { Alert } from '@/components/ui/Alert';
 import { NoResults } from '@/components/ui/EmptyState';
+import { useAuth } from '@/lib/auth-context';
 import { getCalibrationStatus, getCalibrationStatusConfig } from '@/components/forms/EquipmentForm';
 
 // ============================================================================
@@ -161,35 +164,38 @@ const COLUMNS: ColumnDef<EquipmentRecord>[] = [
     key: 'equipmentId',
     header: 'Equipment ID',
     mono: true,
-    width: 120,
+    width: 112,
+    minWidth: 96,
     sortable: true,
   },
   {
     key: 'name',
     header: 'Name',
-    width: 180,
+    minWidth: 150,
     sortable: true,
   },
   {
     key: 'type',
     header: 'Type',
-    width: 130,
+    width: 112,
   },
   {
     key: 'serialNumber',
     header: 'Serial No.',
     mono: true,
-    width: 120,
+    width: 112,
+    minWidth: 96,
   },
   {
     key: 'laboratoryCode',
     header: 'Laboratory',
-    width: 100,
+    width: 96,
+    minWidth: 88,
   },
   {
-    key: 'calibrationValidUntil',
+    key: 'calibrationStatus',
     header: 'Cal. Status',
-    width: 140,
+    width: 122,
     render: (_, row) => {
       const status = getCalibrationStatus(row.calibrationDate, row.calibrationValidUntil);
       const config = getCalibrationStatusConfig(status);
@@ -203,7 +209,8 @@ const COLUMNS: ColumnDef<EquipmentRecord>[] = [
   {
     key: 'calibrationValidUntil',
     header: 'Valid Until',
-    width: 100,
+    width: 116,
+    minWidth: 110,
     sortable: true,
     render: (_, row) => {
       if (!row.calibrationValidUntil) return '—';
@@ -224,7 +231,7 @@ const COLUMNS: ColumnDef<EquipmentRecord>[] = [
   {
     key: 'condition',
     header: 'Condition',
-    width: 100,
+    minWidth: 110,
     render: (_, row) => {
       const config = {
         good: { color: 'success' as const, label: 'Good' },
@@ -246,7 +253,11 @@ function cn(...classes: (string | boolean | undefined | null)[]) {
 // ============================================================================
 
 export default function EquipmentPage() {
-  const [searchQuery, setSearchQuery] = React.useState('');
+  // Shared live search — bound to the TopBar header search
+  const searchQuery = useDashboardSearch();
+  // Only tester/admin roles register test equipment
+  const { hasPermission } = useAuth();
+  const canRegisterEquipment = hasPermission('instruments:create');
   const [typeFilter, setTypeFilter] = React.useState('all');
   const [calibrationFilter, setCalibrationFilter] = React.useState('all');
   const [sort, setSort] = React.useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'equipmentId', direction: 'asc' });
@@ -265,15 +276,9 @@ export default function EquipmentPage() {
   const filteredData = React.useMemo(() => {
     let result = [...MOCK_EQUIPMENT];
 
-    // Search filter
+    // Deep search: any field, nested values, numbers — null-safe
     if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      result = result.filter(row =>
-        row.name.toLowerCase().includes(query) ||
-        row.equipmentId.toLowerCase().includes(query) ||
-        row.serialNumber.toLowerCase().includes(query) ||
-        row.manufacturer.toLowerCase().includes(query)
-      );
+      result = deepSearch(result, searchQuery);
     }
 
     // Type filter
@@ -309,9 +314,11 @@ export default function EquipmentPage() {
         title="Equipment"
         subtitle="Calibration weights, standards, and test accessories"
         actions={
-          <Link href="/equipment/new">
-            <Button variant="primary" size="md">Register Equipment</Button>
-          </Link>
+          canRegisterEquipment ? (
+            <Link href="/equipment/new">
+              <Button variant="primary" size="md">Register Equipment</Button>
+            </Link>
+          ) : undefined
         }
       />
 
@@ -338,7 +345,7 @@ export default function EquipmentPage() {
             label=""
             placeholder="Search name, ID, serial number…"
             value={searchQuery}
-            onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
+            onChange={(e) => { setDashboardSearch(e.target.value); setPage(1); }}
             className="flex-1 min-w-[200px]"
           />
           <Select
@@ -383,7 +390,7 @@ export default function EquipmentPage() {
         emptyState={
           <NoResults
             onClearFilters={() => {
-              setSearchQuery('');
+              setDashboardSearch('');
               setTypeFilter('all');
               setCalibrationFilter('all');
             }}

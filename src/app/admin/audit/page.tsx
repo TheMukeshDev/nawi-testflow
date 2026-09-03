@@ -7,10 +7,13 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { workflowStore } from '@/lib/workflow-store';
+import { useDashboardSearch, setDashboardSearch } from '@/components/layout/DashboardSearchContext';
 import { RouteGuard } from '@/components/auth/RouteGuard';
 import { Badge } from '@/components/ui/Badge';
+import { rowMatchesQuery } from '@/lib/search';
 
 interface AuditEvent {
   id: string;
@@ -30,12 +33,23 @@ const ACTION_BADGE: Record<string, { color: 'primary' | 'success' | 'warning' | 
   REPORT_APPROVED: { color: 'success' },
   REPORT_REJECTED: { color: 'danger' },
   REPORT_FINALIZED: { color: 'success' },
+  REPORT_REVISION_REQUESTED: { color: 'danger' },
+  REPORT_RESUBMITTED: { color: 'warning' },
   TEST_STARTED: { color: 'primary' },
   OBSERVATION_ADDED: { color: 'gray' },
   CALCULATION_EXECUTED: { color: 'gray' },
   ATTACHMENT_UPLOADED: { color: 'gray' },
   USER_LOGIN: { color: 'gray' },
   REPORT_EXPORTED: { color: 'gray' },
+};
+
+// Map live workflow-history actions onto the audit event vocabulary.
+const HISTORY_ACTION_MAP: Record<string, string> = {
+  SUBMITTED: 'REPORT_SUBMITTED',
+  APPROVED: 'REPORT_APPROVED',
+  REVISED: 'REPORT_REVISION_REQUESTED',
+  DISAPPROVED: 'REPORT_REVISION_REQUESTED',
+  UPDATED: 'REPORT_RESUBMITTED',
 };
 
 const MOCK_AUDIT: AuditEvent[] = [
@@ -131,15 +145,39 @@ const MOCK_AUDIT: AuditEvent[] = [
 
 export default function AdminAuditPage() {
   const [actionFilter, setActionFilter] = useState('all');
-  const [search, setSearch] = useState('');
+  // Shared live search — bound to the TopBar header search
+  const search = useDashboardSearch();
+  // Live entries from the actual test workflow (rejections, revisions, approvals…)
+  const [liveEvents, setLiveEvents] = useState<AuditEvent[]>([]);
 
-  const filtered = MOCK_AUDIT.filter(e => {
+  useEffect(() => {
+    const refresh = () => {
+      const events = workflowStore.getHistory().map((h, i) => ({
+        id: `live-${h.id}`,
+        timestamp: h.timestamp,
+        actor: h.actorName,
+        actorRole: h.actorRole,
+        action: HISTORY_ACTION_MAP[h.action] || h.action,
+        entityType: 'test_report',
+        entityId: h.testNumber,
+        description: `${h.notes || `${h.action.replace(/_/g, ' ').toLowerCase()} ${h.testNumber}`} (${h.previousStatus || '—'} → ${h.newStatus})`,
+        ipAddress: 'local',
+      }));
+      setLiveEvents(events);
+    };
+    refresh();
+    const unsubscribe = workflowStore.subscribe(refresh);
+    return unsubscribe;
+  }, []);
+
+  // Live workflow events first, then the seeded system events — newest first.
+  const allEvents = [...liveEvents, ...MOCK_AUDIT].sort(
+    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+  );
+
+  const filtered = allEvents.filter(e => {
     const matchAction = actionFilter === 'all' || e.action === actionFilter;
-    const matchSearch = !search ||
-      e.actor.toLowerCase().includes(search.toLowerCase()) ||
-      e.description.toLowerCase().includes(search.toLowerCase()) ||
-      e.entityId.toLowerCase().includes(search.toLowerCase());
-    return matchAction && matchSearch;
+    return matchAction && rowMatchesQuery(e, search);
   });
 
   return (
@@ -155,7 +193,7 @@ export default function AdminAuditPage() {
           <input
             type="text"
             value={search}
-            onChange={e => setSearch(e.target.value)}
+            onChange={e => setDashboardSearch(e.target.value)}
             placeholder="Search actor, description, entity..."
             className="flex-1 max-w-[300px] h-[34px] px-3 border border-gray-300 rounded-sm text-[13px] text-gray-900 focus:outline-none focus:border-[#1e3a5f] focus:ring-1 focus:ring-blue-200"
           />
@@ -169,6 +207,8 @@ export default function AdminAuditPage() {
             <option value="REPORT_SUBMITTED">Report Submitted</option>
             <option value="REPORT_APPROVED">Report Approved</option>
             <option value="REPORT_REJECTED">Report Rejected</option>
+            <option value="REPORT_REVISION_REQUESTED">Revision Requested</option>
+            <option value="REPORT_RESUBMITTED">Report Resubmitted</option>
             <option value="TEST_STARTED">Test Started</option>
             <option value="CALCULATION_EXECUTED">Calculation Executed</option>
             <option value="USER_LOGIN">User Login</option>

@@ -16,10 +16,13 @@ import Link from 'next/link';
 import { Shell } from '@/components/layout/Shell';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { DataTable, TableFilters, FilterTabs, type ColumnDef } from '@/components/ui/DataTable';
+import { deepSearch } from '@/lib/search';
+import { useDashboardSearch, setDashboardSearch } from '@/components/layout/DashboardSearchContext';
 import { Button } from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/FormControls';
 import { Badge } from '@/components/ui/Badge';
 import { NoResults } from '@/components/ui/EmptyState';
+import { useAuth } from '@/lib/auth-context';
 import type { InstrumentClass } from '@/types';
 
 // ============================================================================
@@ -256,7 +259,11 @@ const COLUMNS: ColumnDef<InstrumentRecord>[] = [
 // ============================================================================
 
 export default function InstrumentsPage() {
-  const [searchQuery, setSearchQuery] = React.useState('');
+  // Shared live search — bound to the TopBar header search
+  const searchQuery = useDashboardSearch();
+  // Only tester/admin roles register instruments
+  const { hasPermission } = useAuth();
+  const canRegisterInstrument = hasPermission('instruments:create');
   const [conditionFilter, setConditionFilter] = React.useState('all');
   const [classFilter, setClassFilter] = React.useState('all');
   const [sort, setSort] = React.useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'serialNumber', direction: 'asc' });
@@ -267,16 +274,9 @@ export default function InstrumentsPage() {
   const filteredData = React.useMemo(() => {
     let result = [...MOCK_INSTRUMENTS];
 
-    // Search filter
+    // Deep search: any field, nested values, numbers — null-safe
     if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      result = result.filter(row =>
-        row.serialNumber.toLowerCase().includes(query) ||
-        row.modelName.toLowerCase().includes(query) ||
-        row.modelNumber.toLowerCase().includes(query) ||
-        row.manufacturerName.toLowerCase().includes(query) ||
-        row.laboratoryCode.toLowerCase().includes(query)
-      );
+      result = deepSearch(result, searchQuery);
     }
 
     // Condition filter
@@ -309,9 +309,11 @@ export default function InstrumentsPage() {
         title="Instruments"
         subtitle="Registered weighing instruments and their specifications"
         actions={
-          <Link href="/instruments/new">
-            <Button variant="primary" size="md">Register Instrument</Button>
-          </Link>
+          canRegisterInstrument ? (
+            <Link href="/instruments/new">
+              <Button variant="primary" size="md">Register Instrument</Button>
+            </Link>
+          ) : undefined
         }
       />
 
@@ -322,7 +324,7 @@ export default function InstrumentsPage() {
             label=""
             placeholder="Search serial number, model, manufacturer…"
             value={searchQuery}
-            onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
+            onChange={(e) => { setDashboardSearch(e.target.value); setPage(1); }}
             className="flex-1 min-w-[250px]"
           />
           <Select
@@ -367,7 +369,7 @@ export default function InstrumentsPage() {
         emptyState={
           <NoResults
             onClearFilters={() => {
-              setSearchQuery('');
+              setDashboardSearch('');
               setConditionFilter('all');
               setClassFilter('all');
             }}

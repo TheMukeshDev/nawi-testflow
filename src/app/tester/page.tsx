@@ -13,7 +13,10 @@ import React, { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { RouteGuard } from '@/components/auth/RouteGuard';
 import { TestStatusBadge } from '@/components/ui/StatusBadge';
+import { SearchInput } from '@/components/ui/SearchInput';
+import { useDashboardSearch, setDashboardSearch } from '@/components/layout/DashboardSearchContext';
 import { workflowStore, type StoredTest } from '@/lib/workflow-store';
+import { deepSearch } from '@/lib/search';
 import { TestResultModal } from '@/components/workflow/TestResultModal';
 import { downloadTestReportPDF } from '@/lib/report-generator';
 import Link from 'next/link';
@@ -22,6 +25,8 @@ export default function TesterDashboard() {
   const [tests, setTests] = useState<StoredTest[]>([]);
   const [selectedTest, setSelectedTest] = useState<StoredTest | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  // Shared live search — bound to the TopBar header search
+  const searchQuery = useDashboardSearch();
 
   const refreshData = () => {
     setTests(workflowStore.getTests());
@@ -38,6 +43,13 @@ export default function TesterDashboard() {
   const activeTests = tests.filter(t => t.status === 'in-testing' || t.status === 'draft' || t.status === 'revision-requested');
   const submittedTests = tests.filter(t => t.status === 'pending-review');
   const completedTests = tests.filter(t => t.status === 'completed' || t.status === 'approved');
+  // Tests the reviewer returned — top-priority attention queue
+  const revisionTests = tests.filter(t => t.status === 'revision-requested');
+
+  // Universal deep search across every field of each section (null-safe)
+  const applySearch = <T,>(rows: T[]): T[] => (searchQuery.trim() ? deepSearch(rows, searchQuery) : rows);
+  const visibleActive = applySearch(tests.filter(t => t.status !== 'completed' && t.status !== 'approved'));
+  const visibleCompleted = applySearch(completedTests);
 
   const openTestModal = (test: StoredTest) => {
     setSelectedTest(test);
@@ -73,6 +85,59 @@ export default function TesterDashboard() {
           </Link>
         </div>
 
+        {/* ── Needs Revision: Action Required attention queue ── */}
+        {revisionTests.length > 0 && (
+          <div className="mb-5 border border-amber-400 bg-amber-50 rounded-md overflow-hidden">
+            <div className="flex items-center gap-2 px-4 py-2.5 bg-amber-100 border-b border-amber-300">
+              <span className="text-[13px]">⚠️</span>
+              <h2 className="text-[13px] font-bold text-amber-900">
+                Action Required — {revisionTests.length} test{revisionTests.length > 1 ? 's' : ''} returned by Reviewer for correction
+              </h2>
+              <span className="ml-auto text-[11px] text-amber-800 font-mono">Needs Revision</span>
+            </div>
+            <div className="divide-y divide-amber-200/70">
+              {revisionTests.map(t => (
+                <div key={t.id} className="flex flex-col sm:flex-row sm:items-center gap-2 px-4 py-2.5">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-[12px] font-bold text-[#1e3a5f]">{t.testNumber}</span>
+                      <span className="text-[11px] text-gray-600">{t.instrumentModel} &bull; {t.instrumentSerial}</span>
+                      {t.revisionCount ? (
+                        <span className="px-1.5 py-0.5 text-[10px] font-bold bg-amber-600 text-white rounded">Round {t.revisionCount}</span>
+                      ) : null}
+                    </div>
+                    {t.reviewNotes && (
+                      <p className="text-[11.5px] text-amber-900 leading-snug truncate mt-0.5">
+                        <span className="font-semibold">Reviewer ({t.reviewer || 'Dr. K. Sharma'}):</span> {t.reviewNotes}
+                      </p>
+                    )}
+                    {t.returnedAt && (
+                      <p className="text-[10.5px] text-gray-500 font-mono mt-0.5">
+                        Returned {new Date(t.returnedAt).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => openTestModal(t)}
+                    className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded text-[11px] font-bold transition-colors shadow-xs shrink-0 cursor-pointer"
+                  >
+                    Fix & Resubmit →
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── Live Search ── */}
+        <SearchInput
+          value={searchQuery}
+          onChange={setDashboardSearch}
+          placeholder="Search by test ref, model, serial number, status, reviewer…"
+          ariaLabel="Search tester records"
+          className="mb-6 max-w-xl"
+        />
+
         {/* ── Metrics ── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
           <MetricCard label="Active / In-Testing" value={String(activeTests.length)} color="primary" />
@@ -87,9 +152,11 @@ export default function TesterDashboard() {
             Active & Pending Review Tests
           </h2>
           <div className="bg-white border border-gray-200 rounded overflow-hidden shadow-2xs">
-            {tests.filter(t => t.status !== 'completed' && t.status !== 'approved').length === 0 ? (
+            {visibleActive.length === 0 ? (
               <div className="py-8 text-center text-gray-400 text-[13px]">
-                No active tests. Start a new test report to begin.
+                {searchQuery.trim()
+                  ? `No active tests match "${searchQuery.trim()}".`
+                  : 'No active tests. Start a new test report to begin.'}
               </div>
             ) : (
               <table className="w-full text-[13px]">
@@ -113,7 +180,7 @@ export default function TesterDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {tests.filter(t => t.status !== 'completed' && t.status !== 'approved').map((t) => (
+                  {visibleActive.map((t) => (
                     <tr key={t.id} className="border-b border-gray-100 hover:bg-gray-50/60 transition-colors">
                       <td className="px-3 py-2.5 font-mono text-[12px] font-bold text-[#1e3a5f]">
                         {t.testNumber}
@@ -166,9 +233,11 @@ export default function TesterDashboard() {
             Completed & Approved Test Reports
           </h2>
           <div className="bg-white border border-gray-200 rounded overflow-hidden shadow-2xs">
-            {completedTests.length === 0 ? (
+            {visibleCompleted.length === 0 ? (
               <div className="py-8 text-center text-gray-400 text-[13px]">
-                No completed test reports yet.
+                {searchQuery.trim()
+                  ? `No completed test reports match "${searchQuery.trim()}".`
+                  : 'No completed test reports yet.'}
               </div>
             ) : (
               <table className="w-full text-[13px]">
@@ -192,7 +261,7 @@ export default function TesterDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {completedTests.map((t) => (
+                  {visibleCompleted.map((t) => (
                     <tr key={t.id} className="border-b border-gray-100 hover:bg-gray-50/60 transition-colors">
                       <td className="px-3 py-2.5 font-mono text-[12px] font-bold text-[#1e3a5f]">
                         {t.testNumber}
