@@ -14,6 +14,7 @@ import { TestStatusBadge, ComplianceBadge } from '@/components/ui/StatusBadge';
 import { downloadTestReportPDF, downloadTestReportDOCX, printTestReport } from '@/lib/report-generator';
 import { workflowStore, type StoredTest, type StoredReport } from '@/lib/workflow-store';
 import { DocaPortalModal } from './DocaPortalModal';
+import { EditTestModal } from './EditTestModal';
 
 interface TestResultModalProps {
   open: boolean;
@@ -34,8 +35,11 @@ export function TestResultModal({
 }: TestResultModalProps) {
   const [reviewNotes, setReviewNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [actionSuccess, setActionSuccess] = useState<'approved' | 'rejected' | null>(null);
+  const [actionSuccess, setActionSuccess] = useState<'approved' | 'rejected' | 'disapproved' | null>(null);
   const [showDocaModal, setShowDocaModal] = useState(false);
+  const [showDisapproveInput, setShowDisapproveInput] = useState(false);
+  const [disapproveReason, setDisapproveReason] = useState('');
+  const [showEditModal, setShowEditModal] = useState(false);
 
   if (!open || !test) return null;
 
@@ -59,6 +63,21 @@ export function TestResultModal({
       workflowStore.rejectTest(test.id, 'Dr. K. Sharma', reviewNotes);
       setIsSubmitting(false);
       setActionSuccess('rejected');
+      if (onActionComplete) onActionComplete();
+    }, 400);
+  };
+
+  const handleDisapprove = () => {
+    if (!disapproveReason.trim()) {
+      alert('Please specify the reason for revoking approval.');
+      return;
+    }
+    setIsSubmitting(true);
+    setTimeout(() => {
+      workflowStore.disapproveTest(test.id, 'Dr. K. Sharma', disapproveReason);
+      setIsSubmitting(false);
+      setActionSuccess('disapproved');
+      setShowDisapproveInput(false);
       if (onActionComplete) onActionComplete();
     }, 400);
   };
@@ -246,14 +265,89 @@ export function TestResultModal({
               </div>
             </div>
           ) : (
-            test.reviewNotes && (
-              <div className="border border-gray-200 bg-gray-50 rounded-sm p-3.5">
-                <div className="text-[11px] font-bold text-gray-700 uppercase tracking-wide mb-1">
-                  Reviewer Remarks ({test.reviewer || 'Review Authority'}):
+            <div className="space-y-3">
+              {test.reviewNotes && (
+                <div className="border border-gray-200 bg-gray-50 rounded-sm p-3.5">
+                  <div className="text-[11px] font-bold text-gray-700 uppercase tracking-wide mb-1">
+                    Reviewer Remarks ({test.reviewer || 'Review Authority'}):
+                  </div>
+                  <p className="text-[12px] text-gray-800 leading-relaxed">{test.reviewNotes}</p>
                 </div>
-                <p className="text-[12px] text-gray-800 leading-relaxed">{test.reviewNotes}</p>
-              </div>
-            )
+              )}
+
+              {/* Revision Requested - Action for Tester */}
+              {test.status === 'revision-requested' && (
+                <div className="border border-amber-300 bg-amber-50 rounded-sm p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                  <div>
+                    <h4 className="text-[13px] font-bold text-amber-900 flex items-center gap-1.5">
+                      <span>⚠️</span> Revision Required by Reviewer
+                    </h4>
+                    <p className="text-[12px] text-amber-800 mt-0.5">
+                      This test was disapproved / sent back for revision. Update your environmental readings or observations and resubmit.
+                    </p>
+                  </div>
+                  <Button
+                    variant="primary"
+                    size="md"
+                    onClick={() => setShowEditModal(true)}
+                    className="bg-amber-700 hover:bg-amber-800 text-white shrink-0 shadow-xs cursor-pointer"
+                  >
+                    ✏️ Edit &amp; Resubmit Test
+                  </Button>
+                </div>
+              )}
+
+              {/* Post-Approval Revocation Control for Completed Tests */}
+              {test.status === 'completed' && (
+                <div className="border border-red-200 bg-red-50/40 rounded-sm p-4">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <div>
+                      <h4 className="text-[13px] font-bold text-red-900 flex items-center gap-1.5">
+                        <span>⚠️</span> Disapprove / Revoke Approval
+                      </h4>
+                      <p className="text-[11.5px] text-red-700 mt-0.5">
+                        If discrepancies or audit errors are discovered post-approval, you can revoke approval and send this report back to the tester.
+                      </p>
+                    </div>
+                    {!showDisapproveInput && (
+                      <button
+                        onClick={() => setShowDisapproveInput(true)}
+                        className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-[12px] font-semibold rounded shadow-xs transition-colors shrink-0 cursor-pointer"
+                      >
+                        Disapprove / Revoke Approval
+                      </button>
+                    )}
+                  </div>
+
+                  {showDisapproveInput && (
+                    <div className="mt-3 pt-3 border-t border-red-200 space-y-2.5">
+                      <label className="block text-[12px] font-semibold text-red-900">
+                        Reason for Disapproval &amp; Revocation Remarks:
+                      </label>
+                      <textarea
+                        value={disapproveReason}
+                        onChange={e => setDisapproveReason(e.target.value)}
+                        placeholder="Specify discrepancy found (e.g. Load cell calibration drift detected during re-verification, observation points need re-measurement)..."
+                        rows={2}
+                        className="w-full p-2 bg-white border border-red-300 rounded text-[12.5px] text-gray-900 focus:outline-none focus:border-red-600"
+                      />
+                      <div className="flex items-center justify-end gap-2">
+                        <Button variant="secondary" size="sm" onClick={() => setShowDisapproveInput(false)}>
+                          Cancel
+                        </Button>
+                        <button
+                          onClick={handleDisapprove}
+                          disabled={isSubmitting}
+                          className="px-3 py-1.5 bg-red-700 hover:bg-red-800 text-white text-[12px] font-semibold rounded transition-colors disabled:opacity-50 cursor-pointer"
+                        >
+                          {isSubmitting ? 'Revoking...' : 'Confirm Disapproval & Notify Tester'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           )}
         </div>
 
@@ -320,6 +414,18 @@ export function TestResultModal({
           onClose={() => setShowDocaModal(false)}
           test={test}
           report={report}
+        />
+
+        {/* Edit & Resubmit Test Modal */}
+        <EditTestModal
+          open={showEditModal}
+          onClose={() => setShowEditModal(false)}
+          test={test}
+          onSaved={() => {
+            setShowEditModal(false);
+            if (onActionComplete) onActionComplete();
+            onClose();
+          }}
         />
       </div>
     </div>

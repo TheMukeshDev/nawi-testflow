@@ -76,10 +76,24 @@ export interface StoredReport {
   version: number;
 }
 
+export interface WorkflowHistoryEntry {
+  id: string;
+  testId: string;
+  testNumber: string;
+  action: 'SUBMITTED' | 'APPROVED' | 'DISAPPROVED' | 'UPDATED' | 'REVISED';
+  actorName: string;
+  actorRole: string;
+  timestamp: string;
+  notes?: string;
+  previousStatus?: string;
+  newStatus: string;
+}
+
 const STORAGE_KEYS = {
   TESTS: 'nawi_workflow_tests_v1',
   REPORTS: 'nawi_workflow_reports_v1',
   NOTIFICATIONS: 'nawi_workflow_notifications_v1',
+  HISTORY: 'nawi_workflow_history_v1',
 };
 
 const SEED_TESTS: StoredTest[] = [
@@ -293,6 +307,33 @@ const SEED_NOTIFICATIONS: WorkflowNotification[] = [
   },
 ];
 
+const SEED_HISTORY: WorkflowHistoryEntry[] = [
+  {
+    id: 'hist-1',
+    testId: 'TR-003',
+    testNumber: 'TR-2026-003',
+    action: 'APPROVED',
+    actorName: 'Dr. K. Sharma',
+    actorRole: 'reviewer',
+    timestamp: '2026-09-01T11:00:00Z',
+    notes: 'Approved and finalized per OIML R-76 standards.',
+    previousStatus: 'pending-review',
+    newStatus: 'completed',
+  },
+  {
+    id: 'hist-2',
+    testId: 'TR-001',
+    testNumber: 'TR-2026-001',
+    action: 'SUBMITTED',
+    actorName: 'Priya Mehta',
+    actorRole: 'tester',
+    timestamp: '2026-09-02T14:30:00Z',
+    notes: 'Initial test report submission for non-automatic electronic balance.',
+    previousStatus: 'in-testing',
+    newStatus: 'pending-review',
+  },
+];
+
 function isBrowser(): boolean {
   return typeof window !== 'undefined';
 }
@@ -500,6 +541,18 @@ export const workflowStore = {
       senderName: reviewerName,
     });
 
+    // Add History Entry
+    this.addHistoryEntry({
+      testId: test.id,
+      testNumber: test.testNumber,
+      action: 'APPROVED',
+      actorName: reviewerName,
+      actorRole: 'reviewer',
+      previousStatus: 'pending-review',
+      newStatus: 'completed',
+      notes: notes,
+    });
+
     return test;
   },
 
@@ -509,6 +562,7 @@ export const workflowStore = {
     if (index === -1) return undefined;
 
     const test = tests[index];
+    const prevStatus = test.status;
     test.status = 'revision-requested';
     test.reviewer = reviewerName;
     test.reviewNotes = reason;
@@ -529,6 +583,18 @@ export const workflowStore = {
       }).catch(err => console.warn('[WorkflowStore] Supabase reject err:', err));
     }
 
+    // Add History Entry
+    this.addHistoryEntry({
+      testId: test.id,
+      testNumber: test.testNumber,
+      action: 'REVISED',
+      actorName: reviewerName,
+      actorRole: 'reviewer',
+      previousStatus: prevStatus,
+      newStatus: 'revision-requested',
+      notes: reason,
+    });
+
     // Notify Tester
     this.addNotification({
       title: 'Revision Requested by Reviewer',
@@ -538,6 +604,129 @@ export const workflowStore = {
       testId: test.id,
       testNumber: test.testNumber,
       senderName: reviewerName,
+    });
+
+    return test;
+  },
+
+  disapproveTest(testId: string, reviewerName = 'Dr. K. Sharma', reason = 'Approval revoked upon verification discrepancy.'): StoredTest | undefined {
+    const tests = this.getTests();
+    const index = tests.findIndex(t => t.id === testId || t.testNumber === testId);
+    if (index === -1) return undefined;
+
+    const test = tests[index];
+    const prevStatus = test.status;
+    test.status = 'revision-requested';
+    test.reviewer = reviewerName;
+    test.reviewNotes = `[DISAPPROVED] ${reason}`;
+    test.lastUpdated = new Date().toISOString();
+    tests[index] = test;
+    saveData(STORAGE_KEYS.TESTS, tests);
+
+    // Remove or archive generated report so it's not active
+    const reports = this.getReports();
+    const filteredReports = reports.filter(r => r.testId !== test.id && r.testNumber !== test.testNumber);
+    saveData(STORAGE_KEYS.REPORTS, filteredReports);
+
+    // Persist disapproval to Supabase
+    if (isBrowser()) {
+      fetch(`/api/db/test_reports?id=${encodeURIComponent(test.id)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: 'rejected',
+          compliance_result: 'non-compliant',
+          compliance_notes: `Approval revoked: ${reason}`,
+          updated_at: new Date().toISOString(),
+        }),
+      }).catch(err => console.warn('[WorkflowStore] Supabase disapprove err:', err));
+    }
+
+    // Add History Entry
+    this.addHistoryEntry({
+      testId: test.id,
+      testNumber: test.testNumber,
+      action: 'DISAPPROVED',
+      actorName: reviewerName,
+      actorRole: 'reviewer',
+      previousStatus: prevStatus,
+      newStatus: 'revision-requested',
+      notes: reason,
+    });
+
+    // High-priority notification to Tester
+    this.addNotification({
+      title: 'Test Approval Revoked / Disapproved',
+      message: `${reviewerName} revoked approval for ${test.testNumber}. Reason: "${reason}". Action Required: Please update observations and resubmit.`,
+      type: 'rejection',
+      targetRole: 'tester',
+      testId: test.id,
+      testNumber: test.testNumber,
+      senderName: reviewerName,
+    });
+
+    return test;
+  },
+
+  updateAndResubmitTest(
+    testId: string,
+    updates: {
+      observations?: StoredTest['observations'];
+      notes?: string;
+      temperature?: string;
+      humidity?: string;
+    },
+    testerName = 'Priya Mehta'
+  ): StoredTest | undefined {
+    const tests = this.getTests();
+    const index = tests.findIndex(t => t.id === testId || t.testNumber === testId);
+    if (index === -1) return undefined;
+
+    const test = tests[index];
+    const prevStatus = test.status;
+    if (updates.observations) test.observations = updates.observations;
+    if (updates.temperature) test.temperature = updates.temperature;
+    if (updates.humidity) test.humidity = updates.humidity;
+    test.status = 'pending-review';
+    test.reviewNotes = updates.notes ? `Tester notes: ${updates.notes}` : test.reviewNotes;
+    test.lastUpdated = new Date().toISOString();
+    tests[index] = test;
+    saveData(STORAGE_KEYS.TESTS, tests);
+
+    // Persist resubmission to Supabase
+    if (isBrowser()) {
+      fetch(`/api/db/test_reports?id=${encodeURIComponent(test.id)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: 'pending-review',
+          compliance_result: test.complianceResult,
+          updated_at: new Date().toISOString(),
+        }),
+      }).catch(err => console.warn('[WorkflowStore] Supabase resubmit err:', err));
+    }
+
+    // Add History Entry
+    this.addHistoryEntry({
+      testId: test.id,
+      testNumber: test.testNumber,
+      action: 'UPDATED',
+      actorName: testerName,
+      actorRole: 'tester',
+      previousStatus: prevStatus,
+      newStatus: 'pending-review',
+      notes: updates.notes || 'Observations corrected and resubmitted for verification.',
+    });
+
+    // Notify Reviewer
+    this.addNotification({
+      title: 'Test Updated & Resubmitted',
+      message: `${testerName} updated test observations for ${test.testNumber} and resubmitted for review.`,
+      type: 'submission',
+      targetRole: 'reviewer',
+      testId: test.id,
+      testNumber: test.testNumber,
+      senderName: testerName,
     });
 
     return test;
@@ -617,6 +806,48 @@ export const workflowStore = {
       }
     });
     saveData(STORAGE_KEYS.NOTIFICATIONS, notifs);
+  },
+
+  // Audit & Workflow History
+  getHistory(testId?: string): WorkflowHistoryEntry[] {
+    const all = loadData<WorkflowHistoryEntry[]>(STORAGE_KEYS.HISTORY, SEED_HISTORY);
+    if (!testId) return all;
+    return all.filter(h => h.testId === testId || h.testNumber === testId);
+  },
+
+  addHistoryEntry(entry: Omit<WorkflowHistoryEntry, 'id' | 'timestamp'>): WorkflowHistoryEntry {
+    const history = loadData<WorkflowHistoryEntry[]>(STORAGE_KEYS.HISTORY, SEED_HISTORY);
+    const newEntry: WorkflowHistoryEntry = {
+      ...entry,
+      id: `hist-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      timestamp: new Date().toISOString(),
+    };
+    history.unshift(newEntry);
+    saveData(STORAGE_KEYS.HISTORY, history);
+
+    // Also persist audit log to Supabase
+    if (isBrowser()) {
+      fetch('/api/db/audit_logs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: entry.action,
+          entity_type: 'test_report',
+          entity_id: entry.testId,
+          details: {
+            testNumber: entry.testNumber,
+            actorName: entry.actorName,
+            actorRole: entry.actorRole,
+            previousStatus: entry.previousStatus,
+            newStatus: entry.newStatus,
+            notes: entry.notes,
+          },
+          created_at: new Date().toISOString(),
+        }),
+      }).catch(err => console.warn('[WorkflowStore] Supabase audit log error:', err));
+    }
+
+    return newEntry;
   },
 
   subscribe(callback: () => void): () => void {

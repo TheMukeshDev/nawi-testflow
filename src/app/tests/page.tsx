@@ -146,6 +146,16 @@ export default function TestsPage() {
               {canReview ? 'Review' : 'View'}
             </button>
 
+            {row.status === 'revision-requested' && (
+              <button
+                onClick={() => openTestModal(row, 'view')}
+                className="px-2 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded text-[11px] font-semibold transition-colors cursor-pointer shadow-2xs"
+                title="Edit observations and resubmit"
+              >
+                Fix / Resubmit
+              </button>
+            )}
+
             <button
               onClick={(e) => handleDownloadPDF(e, row)}
               className="px-2 py-1 bg-[#1e3a5f] hover:bg-[#162d4a] text-white rounded text-[11px] font-medium transition-colors shadow-2xs cursor-pointer inline-flex items-center gap-1"

@@ -135,6 +135,14 @@ export default function TesterDashboard() {
                         >
                           View Details
                         </button>
+                        {t.status === 'revision-requested' && (
+                          <button
+                            onClick={() => openTestModal(t)}
+                            className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded text-[11px] font-semibold transition-colors cursor-pointer shadow-xs"
+                          >
+                            ⚠️ Edit &amp; Resubmit
+                          </button>
+                        )}
                         {t.status === 'in-testing' && (
                           <Link
                             href="/tests/new"
