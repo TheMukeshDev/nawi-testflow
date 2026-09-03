@@ -292,7 +292,7 @@ SUPABASE_URL=your-supabase-url
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 DATABASE_URL=postgresql://...
 GEMINI_API_KEY=your-gemini-key  # Optional, enables on-demand "Enhance with AI" (also configurable from Settings UI)
-GEMINI_MODEL=gemini-2.0-flash    # Optional, one of: gemini-2.0-flash, gemini-2.5-flash, gemini-3.8-flash
+GEMINI_MODEL=gemini-3.8-flash    # Optional, one of: gemini-2.0-flash, gemini-2.5-flash, gemini-3.8-flash
 AI_ASSISTANCE_ENABLED=true       # Optional, admin can toggle from System Settings
 ```
 
@@ -387,7 +387,7 @@ Two Vercel projects share this repo (each auto-deploys on push to `master`).
 | `CORS_ORIGINS` | Yes | Comma-separated frontend origins, e.g. `https://nawi-testflow.vercel.app` (browsers block the API otherwise) |
 | `JWT_SECRET` | Yes | Change from default in production |
 | `GEMINI_API_KEY` | Optional | Enables on-demand "Enhance with AI" (also settable from Settings UI) |
-| `GEMINI_MODEL` | Optional | Default `gemini-2.0-flash` |
+| `GEMINI_MODEL` | Optional | Default `gemini-3.8-flash` |
 | `AI_ASSISTANCE_ENABLED` | Optional | Default `true`; admin can toggle in System Settings |
 
 5. Deploy, then verify `https://<backend>.vercel.app/api/health` returns `{"status": "healthy"}` and `…/api/docs` loads

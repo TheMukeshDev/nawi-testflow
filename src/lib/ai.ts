@@ -75,7 +75,7 @@ export async function fetchAiStatus(): Promise<AiStatus | null> {
       ai_configured: !!personal,
       ai_available: !!personal,
       setup_required: !personal,
-      model: personal ? 'gemini-2.0-flash' : null,
+      model: personal ? 'gemini-3.8-flash' : null,
     };
   }
 }
