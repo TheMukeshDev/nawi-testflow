@@ -46,7 +46,7 @@ export default function AdminSettingsPage() {
 
   // AI assistance (admin-global)
   const [aiEnabled, setAiEnabled] = useState(true);
-  const [aiModel, setAiModel] = useState('gemini-2.0-flash');
+  const [aiModel, setAiModel] = useState('gemini-3.8-flash');
   const [aiKey, setAiKey] = useState('');
   const [showKey, setShowKey] = useState(false);
   const [aiStatus, setAiStatus] = useState<{

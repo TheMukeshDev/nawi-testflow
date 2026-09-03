@@ -8,15 +8,26 @@ Main application entry point with:
 - Health check endpoint
 """
 
+import os
+import time
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-import time
+from fastapi.responses import JSONResponse, HTMLResponse
 
 from .core.config import get_settings
 from .core.exceptions import NawiException
 
 settings = get_settings()
+
+# Surface pydantic-loaded .env values into the process environment so every
+# module (engine/ai_settings, engine/ai_assistance) that reads os.environ
+# sees them — identical behaviour to Vercel, where they are real env vars.
+# Must run before the AI modules are imported below.
+if not os.environ.get("GEMINI_API_KEY") and settings.GEMINI_API_KEY:
+    os.environ["GEMINI_API_KEY"] = settings.GEMINI_API_KEY
+if not os.environ.get("GEMINI_MODEL") and settings.GEMINI_MODEL:
+    os.environ["GEMINI_MODEL"] = settings.GEMINI_MODEL
 
 # Create FastAPI app
 app = FastAPI(
@@ -65,6 +76,49 @@ async def health_check():
         "version": settings.APP_VERSION,
         "service": settings.APP_NAME
     }
+
+
+# Root landing page — points to the interactive API docs and repo
+@app.get("/", response_class=HTMLResponse, include_in_schema=False)
+async def root_home():
+    """Landing page directing to the interactive API documentation."""
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{settings.APP_NAME} — API</title>
+  <style>
+    body {{ font-family: 'Segoe UI', system-ui, sans-serif; background: #f5f7fa; color: #1e3a5f; margin: 0; display: flex; align-items: center; justify-content: center; min-height: 100vh; }}
+    .card {{ background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 40px 48px; max-width: 560px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,.06); }}
+    h1 {{ font-size: 22px; margin: 0 0 6px; }}
+    p {{ color: #64748b; font-size: 14px; margin: 0 0 24px; }}
+    .links {{ display: flex; flex-direction: column; gap: 10px; }}
+    a {{ display: block; text-decoration: none; padding: 14px; border-radius: 8px; font-size: 15px; font-weight: 600; transition: .15s; }}
+    a.docs {{ background: #1e3a5f; color: #fff; }}
+    a.docs:hover {{ background: #162d4a; }}
+    a.ghost {{ background: #f1f5f9; color: #1e3a5f; border: 1px solid #e2e8f0; }}
+    a.ghost:hover {{ background: #e2e8f0; }}
+    .meta {{ margin-top: 26px; font-size: 12px; color: #94a3b8; }}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>{settings.APP_NAME}</h1>
+    <p>OIML R-76 Non-Automatic Weighing Instrument Test Report Generation System &middot; API v{settings.APP_VERSION}</p>
+    <div class="links">
+      <a class="docs" href="/api/docs">Interactive API Docs (Swagger UI)</a>
+      <a class="ghost" href="/api/redoc">ReDoc Documentation</a>
+      <a class="ghost" href="/api/health">Health Check</a>
+    </div>
+    <div class="meta">
+      Source: <a href="https://github.com/TheMukeshDev/nawi-testflow" style="color:#1e3a5f;">github.com/TheMukeshDev/nawi-testflow</a><br/>
+      Live frontend: <a href="https://nawi-testflow.vercel.app" style="color:#1e3a5f;">nawi-testflow.vercel.app</a>
+    </div>
+  </div>
+</body>
+</html>
+"""
 
 
 # Import and register routes

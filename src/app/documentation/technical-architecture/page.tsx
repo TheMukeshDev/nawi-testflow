@@ -242,6 +242,29 @@ Decision: PASS / FAIL / NOT_APPLICABLE / INCOMPLETE / RULE_NOT_CONFIGURED`}</Cod
         <Callout type="warning" title="Rule Not Configured">If a required compliance rule does not exist for a given test code and instrument class, the system returns RULE_NOT_CONFIGURED. It never guesses or fabricates a regulatory value.</Callout>
       </Section>
 
+      <Section id="explanation-ai" title="Explanation & AI Assistance (Two-Tier)">
+        <p>Explanations are rule-first. Tier 1 is deterministic and always available; Tier 2 (Gemini) only rephrases on explicit user request.</p>
+        <CodeBlock language="text">{`Compliance Decision (authoritative)
+  |
+Tier 1 — Rule-based explainer (engine/rule_explainer.py, zero AI cost)
+  |  actual formula + observed vs allowed + margin/excess + why pass/fail
+  |  endpoints: POST /ai/explain-rule, POST /ai/summarize-rule,
+  |             GET /ai/process/{test_code}  (no key needed)
+  |
+Tier 2 — Gemini enhancement ("Enhance with AI" click only)
+   |  prompt grounded in the resolved rule (ID, version, formula,
+   |  values, immutable verdict) — never invents limits or verdicts
+   |  requires: feature enabled AND API key in Settings`}</CodeBlock>
+        <SubSection title="Key Gating">
+          <Table headers={['Key', 'Scope', 'How']} rows={[
+            ['Personal key', 'One user', 'Settings page (/settings) — browser-local, sent per-request'],
+            ['Global key', 'All users', 'System Settings (/admin/settings) — admin only'],
+            ['None', 'Everyone', 'Rule-based results only, with a pointer to Settings'],
+          ]} />
+        </SubSection>
+        <Callout type="warning" title="AI Invariants">AI never calculates values, never determines PASS/FAIL, never invents OIML requirements, and never overrides engine results. Every AI output is labeled as assistance.</Callout>
+      </Section>
+
       <Section id="report-engine" title="Report Generation Engine">
         <p>The report engine generates professional technical test reports in PDF and editable DOCX formats.</p>
         <CodeBlock language="text">{`Structured Test Data
@@ -341,7 +364,7 @@ Vercel (CDN + Edge + Serverless)
   |
 Next.js Frontend (React SSR / Static)
   |
-FastAPI Backend (Render / Railway)
+FastAPI Backend (Vercel serverless, api.index:app)
   |
 +-------------------------+
 |  Supabase Platform      |
@@ -354,11 +377,14 @@ FastAPI Backend (Render / Railway)
           <Table headers={['Variable', 'Location', 'Purpose']} rows={[
             ['NEXT_PUBLIC_SUPABASE_URL', 'Frontend', 'Supabase project URL'],
             ['NEXT_PUBLIC_SUPABASE_ANON_KEY', 'Frontend', 'Supabase anonymous (public) key'],
-            ['NEXT_PUBLIC_API_URL', 'Frontend', 'Backend API base URL'],
+            ['NEXT_PUBLIC_API_URL', 'Frontend', 'Backend base URL (code appends /api/v1)'],
             ['SUPABASE_URL', 'Backend', 'Supabase project URL'],
             ['SUPABASE_SERVICE_ROLE_KEY', 'Backend only', 'Supabase admin key (never in frontend)'],
             ['DATABASE_URL', 'Backend only', 'Direct PostgreSQL connection string'],
-            ['GEMINI_API_KEY', 'Backend only', 'Optional AI assistance key'],
+            ['CORS_ORIGINS', 'Backend only', 'Comma-separated frontend origins (deployed URL must be listed)'],
+            ['GEMINI_API_KEY', 'Backend only', 'Optional: enables on-demand Enhance with AI'],
+            ['GEMINI_MODEL', 'Backend only', 'Optional: gemini-2.0-flash / 2.5-flash / 3.8-flash'],
+            ['AI_ASSISTANCE_ENABLED', 'Backend only', 'Optional kill-switch (admin can also toggle in UI)'],
           ]} />
         </SubSection>
         <SubSection title="Production Considerations">

@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0f2440"/>
+      <stop offset="1" stop-color="#1e3a5f"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <circle cx="1050" cy="90" r="260" fill="#ffffff" opacity="0.04"/>
+  <circle cx="180" cy="560" r="300" fill="#ffffff" opacity="0.03"/>
+
+  <!-- Body of scale (metrology balance) -->
+  <g transform="translate(150, 235)">
+    <line x1="0" y1="160" x2="0" y2="-160" stroke="#5b8cc4" stroke-width="12" stroke-linecap="round"/>
+    <line x1="-120" y1="-100" x2="120" y2="-100" stroke="#5b8cc4" stroke-width="12" stroke-linecap="round"/>
+    <line x1="-120" y1="-100" x2="-145" y2="-20" stroke="#5b8cc4" stroke-width="8" fill="none"/>
+    <line x1="120" y1="-100" x2="145" y2="-20" stroke="#5b8cc4" stroke-width="8" fill="none"/>
+    <ellipse cx="-145" cy="-16" rx="45" ry="14" stroke="#5b8cc4" stroke-width="8" fill="none"/>
+    <ellipse cx="145" cy="-16" rx="45" ry="14" stroke="#5b8cc4" stroke-width="8" fill="none"/>
+    <polygon points="0,-160  -18,-120 18,-120" fill="#8fc3ff"/>
+  </g>
+
+  <!-- Title -->
+  <text x="320" y="245" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="72" font-weight="700" fill="#ffffff" letter-spacing="-1">NAWI TestFlow</text>
+  <text x="322" y="300" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="30" font-weight="500" fill="#a9c7e8" letter-spacing="1">OIML R-76 Test Report Generation System</text>
+
+  <!-- Divider -->
+  <rect x="322" y="330" width="120" height="6" rx="3" fill="#7fb2e8"/>
+
+  <!-- Feature line -->
+  <text x="322" y="380" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="22" fill="#cddff2">Deterministic rule-based calculations &middot; On-demand AI assistance</text>
+  <text x="322" y="415" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="22" fill="#cddff2">Signed PDF &amp; DOCX report generation &middot; Role-based workflow</text>
+
+  <text x="322" y="470" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="16" fill="#8fa9c6">github.com/TheMukeshDev/nawi-testflow</text>
+</svg>

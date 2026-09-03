@@ -28,7 +28,7 @@ class Settings(BaseSettings):
 
     # Gemini (AI assistance — on-demand only, gated by Settings key)
     GEMINI_API_KEY: str = ""
-    GEMINI_MODEL: str = "gemini-2.0-flash"
+    GEMINI_MODEL: str = "gemini-3.8-flash"
     AI_ASSISTANCE_ENABLED: bool = True
     
     # JWT

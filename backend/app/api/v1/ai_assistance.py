@@ -215,12 +215,15 @@ async def delete_global_key(
 # ============================================================================
 
 def _extract_mode_and_key(payload: dict) -> tuple[str, Optional[str]]:
-    mode = str(payload.pop("mode", "ai") or "ai").lower()
+    # Rule-based is the cost-aware default. Real Gemini fires ONLY when the
+    # caller explicitly requests mode="ai" (the frontend "Enhance with AI"
+    # button), keeping AI usage strictly on-demand.
+    mode = str(payload.pop("mode", "rule") or "rule").lower()
     key = payload.pop("api_key", None)
     if key is not None:
         key = str(key).strip() or None
     if mode not in ("rule", "ai"):
-        mode = "ai"
+        mode = "rule"
     return mode, key
 
 

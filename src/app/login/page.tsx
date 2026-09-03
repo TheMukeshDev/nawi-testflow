@@ -183,6 +183,16 @@ export default function LoginPage() {
           <p className="text-center text-[11px] text-gray-400 mt-4">
             NAWI TestFlow — OIML R-76 Test Report Management System
           </p>
+          <p className="text-center text-[11px] text-gray-400 mt-1">
+            <a
+              href="https://github.com/TheMukeshDev/nawi-testflow"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-[#1e3a5f]"
+            >
+              github.com/TheMukeshDev/nawi-testflow
+            </a>
+          </p>
         </div>
       </main>
     </div>

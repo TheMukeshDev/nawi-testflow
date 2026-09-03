@@ -489,14 +489,18 @@ function Docs() {
         <div className="h-[2px] w-[48px] bg-[#1e3a5f] mb-8" />
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[
-            { title: 'Technical Architecture', desc: 'System architecture, database schema, API design, and engine documentation.' },
-            { title: 'User Guide', desc: 'Step-by-step guide for testers, reviewers, administrators, and viewers.' },
-            { title: 'OIML R-76 Reference', desc: 'Test procedures, calculation methods, and compliance rule configuration.' },
+            { title: 'Technical Architecture', desc: 'System architecture, database schema, API design, and engine documentation.', href: '/documentation/technical-architecture' },
+            { title: 'User Guide', desc: 'Step-by-step guide for testers, reviewers, administrators, and viewers.', href: '/documentation/user-guide' },
+            { title: 'OIML R-76 Reference', desc: 'Test procedures, calculation methods, and compliance rule configuration.', href: '/documentation/oiml-r76-reference' },
           ].map(doc => (
-            <div key={doc.title} className="border border-gray-200 rounded-sm p-5 hover:border-gray-300 transition-colors">
-              <h3 className="text-[14px] font-semibold text-gray-900 mb-2">{doc.title}</h3>
-              <p className="text-[12px] text-gray-600 leading-relaxed">{doc.desc}</p>
-            </div>
+            <Link key={doc.title} href={doc.href} className="block border border-gray-200 rounded-sm p-5 hover:border-[#1e3a5f] hover:shadow-sm transition-all group">
+              <h3 className="text-[14px] font-semibold text-gray-900 mb-2 group-hover:text-[#1e3a5f]">{doc.title}</h3>
+              <p className="text-[12px] text-gray-600 leading-relaxed mb-3">{doc.desc}</p>
+              <span className="inline-flex items-center gap-1 text-[12px] font-medium text-[#1e3a5f]">
+                Read documentation
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M4 2l4 4-4 4" /></svg>
+              </span>
+            </Link>
           ))}
         </div>
       </div>

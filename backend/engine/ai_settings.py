@@ -33,7 +33,7 @@ def _looks_like_key(key: Optional[str]) -> bool:
 @dataclass
 class AISettings:
     enabled: bool = True
-    model: str = "gemini-2.0-flash"
+    model: str = "gemini-3.8-flash"
     # Global key configured by admin (server-side). Never returned in full.
     global_api_key: Optional[str] = None
 
@@ -81,7 +81,7 @@ class AISettings:
 
 _settings = AISettings(
     enabled=os.environ.get("AI_ASSISTANCE_ENABLED", "true").lower() not in ("0", "false", "no"),
-    model=os.environ.get("GEMINI_MODEL", "gemini-2.0-flash"),
+    model=os.environ.get("GEMINI_MODEL", "gemini-3.8-flash"),
     global_api_key=os.environ.get("GEMINI_API_KEY") or None,
 )
 
@@ -123,6 +123,6 @@ def reset_ai_settings() -> None:
     _settings = AISettings(
         enabled=os.environ.get("AI_ASSISTANCE_ENABLED", "true").lower()
         not in ("0", "false", "no"),
-        model=os.environ.get("GEMINI_MODEL", "gemini-2.0-flash"),
+        model=os.environ.get("GEMINI_MODEL", "gemini-3.8-flash"),
         global_api_key=os.environ.get("GEMINI_API_KEY") or None,
     )
