@@ -870,12 +870,30 @@ export default function NewTestPage() {
         onClose={() => setSerialTarget(null)}
         targetFieldLabel={serialTarget?.label}
         expectedCapacity={instrument.maxCapacity || '3000'}
-        onCaptureWeight={(weight) => {
-          if (serialTarget) {
-            const newObs = [...observations];
-            newObs[serialTarget.oi].measuredValues[serialTarget.vi] = weight;
-            setObservations(newObs);
+        onCaptureWeight={(weight, capturedUnit) => {
+          if (!serialTarget) return;
+          const newObs = [...observations];
+          const target = newObs[serialTarget.oi];
+
+          // Normalize the scale's streamed unit into the observation column unit
+          // (e.g. an RS-232 scale reporting kg must not be written into a gram column).
+          let value = weight;
+          const to = (target.unit || 'g').trim().toLowerCase();
+          const from = (capturedUnit || 'g').trim().toLowerCase();
+          if (from !== to) {
+            const num = parseFloat(weight);
+            if (!Number.isNaN(num)) {
+              const toGrams = (n: number, u: string): number =>
+                u === 'kg' ? n * 1000 : u === 'mg' ? n / 1000 : u === 'lb' ? n * 453.59237 : n;
+              const fromGrams = (n: number, u: string): number =>
+                u === 'kg' ? n / 1000 : u === 'mg' ? n * 1000 : u === 'lb' ? n / 453.59237 : n;
+              const grams = toGrams(num, from);
+              value = String(parseFloat(fromGrams(grams, to).toFixed(6)));
+            }
           }
+
+          target.measuredValues[serialTarget.vi] = value;
+          setObservations(newObs);
         }}
       />
     </DashboardLayout>

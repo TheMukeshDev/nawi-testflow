@@ -67,21 +67,20 @@ function Navbar() {
   return (
     <>
       <header
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-200 ${
-          scrolled ? 'bg-white/95 backdrop-blur-sm border-b border-gray-200 shadow-sm' : 'bg-white border-b border-gray-100'
-        }`}
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-200 ${scrolled ? 'bg-white/95 backdrop-blur-sm border-b border-gray-200 shadow-sm' : 'bg-white border-b border-gray-100'
+          }`}
       >
         <div className="max-w-[1200px] mx-auto px-4 sm:px-6 h-[56px] flex items-center justify-between">
           {/* Logo */}
           <a href="#home" onClick={(e) => { e.preventDefault(); handleNavClick('#home'); }} className="flex items-center gap-2.5 shrink-0">
             <div className="w-[32px] h-[32px] bg-[#1e3a5f] rounded-sm flex items-center justify-center">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <line x1="12" y1="3" x2="12" y2="21" stroke="white" strokeWidth="2" strokeLinecap="round"/>
-                <line x1="5" y1="21" x2="19" y2="21" stroke="white" strokeWidth="2" strokeLinecap="round"/>
-                <line x1="3" y1="8" x2="21" y2="8" stroke="white" strokeWidth="2" strokeLinecap="round"/>
-                <path d="M3 8 L1 14 Q3 16 5 14 L3 8" stroke="white" strokeWidth="1.5" fill="none"/>
-                <path d="M21 8 L19 14 Q21 16 23 14 L21 8" stroke="white" strokeWidth="1.5" fill="none"/>
-                <polygon points="12,3 10.5,6 13.5,6" fill="white"/>
+                <line x1="12" y1="3" x2="12" y2="21" stroke="white" strokeWidth="2" strokeLinecap="round" />
+                <line x1="5" y1="21" x2="19" y2="21" stroke="white" strokeWidth="2" strokeLinecap="round" />
+                <line x1="3" y1="8" x2="21" y2="8" stroke="white" strokeWidth="2" strokeLinecap="round" />
+                <path d="M3 8 L1 14 Q3 16 5 14 L3 8" stroke="white" strokeWidth="1.5" fill="none" />
+                <path d="M21 8 L19 14 Q21 16 23 14 L21 8" stroke="white" strokeWidth="1.5" fill="none" />
+                <polygon points="12,3 10.5,6 13.5,6" fill="white" />
               </svg>
             </div>
             <div className="flex flex-col leading-none">
@@ -97,11 +96,10 @@ function Navbar() {
                 key={link.href}
                 href={link.href}
                 onClick={(e) => { e.preventDefault(); handleNavClick(link.href); }}
-                className={`px-3 py-1.5 text-[13px] font-medium rounded-sm transition-colors ${
-                  activeSection === link.href.replace('#', '')
+                className={`px-3 py-1.5 text-[13px] font-medium rounded-sm transition-colors ${activeSection === link.href.replace('#', '')
                     ? 'text-[#1e3a5f] bg-blue-50'
                     : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                }`}
+                  }`}
               >
                 {link.label}
               </a>
@@ -151,11 +149,10 @@ function Navbar() {
                 key={link.href}
                 href={link.href}
                 onClick={(e) => { e.preventDefault(); handleNavClick(link.href); }}
-                className={`block py-2.5 px-3 text-[14px] font-medium rounded-sm ${
-                  activeSection === link.href.replace('#', '')
+                className={`block py-2.5 px-3 text-[14px] font-medium rounded-sm ${activeSection === link.href.replace('#', '')
                     ? 'text-[#1e3a5f] bg-blue-50'
                     : 'text-gray-700 hover:bg-gray-50'
-                }`}
+                  }`}
               >
                 {link.label}
               </a>
@@ -544,7 +541,7 @@ function Footer() {
             <h4 className="text-[12px] font-semibold text-gray-900 mb-2">Project</h4>
             <ul className="space-y-1 text-[11px] text-gray-500">
               <li><a href="#docs" className="hover:text-gray-700">Documentation</a></li>
-              <li><a href="https://github.com" className="hover:text-gray-700">GitHub</a></li>
+              <li><a href="https://github.com/themukeshdev/navi-testflow" className="hover:text-gray-700">GitHub</a></li>
               <li><a href="#about" className="hover:text-gray-700">About</a></li>
             </ul>
           </div>
@@ -554,14 +551,14 @@ function Footer() {
             <ul className="space-y-1 text-[11px] text-gray-500">
               <li>Smart India Hackathon 2026</li>
               <li>Problem Statement 26035</li>
-              <li>nawi-testflow@example.com</li>
+              <li>mukeshkumar916241@gmail.com</li>
             </ul>
           </div>
         </div>
         <div className="border-t border-gray-200 pt-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <p className="text-[11px] text-gray-400">
-              &copy; 2025 NAWI TestFlow. Smart India Hackathon Project.
+              &copy; 2026 NAWI TestFlow. Smart India Hackathon Project.
             </p>
             <p className="text-[10px] text-gray-400">
               This is a software prototype for SIH and must be validated against authoritative requirements before regulatory production use.

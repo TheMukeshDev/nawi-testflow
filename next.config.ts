@@ -2,6 +2,9 @@ import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // Allow local dev-origin access (desktop preview webviews commonly hit 127.0.0.1);
+  // otherwise Next 16 blocks dev-only resources (fonts, HMR) as cross-origin.
+  allowedDevOrigins: ['127.0.0.1', 'localhost'],
   async rewrites() {
     return [
       {

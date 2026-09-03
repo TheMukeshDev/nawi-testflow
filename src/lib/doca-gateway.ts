@@ -6,7 +6,7 @@
  */
 
 import type { StoredTest, StoredReport } from './workflow-store';
-import { computeCertificateHash } from './crypto-qr';
+import { certificatePayloadFromTest, buildVerificationUrl, computeCertificateHash } from './crypto-qr';
 
 export interface DocaRegistrationPayload {
   '@context': string;
@@ -41,18 +41,10 @@ export interface DocaGatewayResponse {
 }
 
 export async function buildDocaPayload(test: StoredTest, report?: StoredReport | null): Promise<DocaRegistrationPayload> {
-  const hash = await computeCertificateHash({
-    reportNumber: report?.reportNumber || `RPT-${test.testNumber}`,
-    testNumber: test.testNumber,
-    instrumentModel: test.instrumentModel,
-    instrumentSerial: test.instrumentSerial,
-    laboratory: test.laboratory,
-    complianceResult: test.complianceResult,
-    testDate: test.testDate,
-    technician: test.technician,
-    reviewer: test.reviewer,
-    observationsSummary: test.observations.map(o => `${o.testCode}:${o.mean}:${o.verdict}`).join(','),
-  });
+  // Hash via the same canonical builder as the certificate QR / verification portal,
+  // so the e-Maap registry digest always matches what a QR scan recomputes.
+  const payload = certificatePayloadFromTest(test, report || undefined);
+  const hash = await computeCertificateHash(payload);
 
   return {
     '@context': 'https://schema.doca.gov.in/legal-metrology/v1',
@@ -72,7 +64,7 @@ export async function buildDocaPayload(test: StoredTest, report?: StoredReport |
     authorizedSignatory: test.reviewer || 'Dr. K. Sharma',
     digitalSignatureRef: 'eMudhra-Class3-DSC-eM2026-IN-09884217',
     certificateHash: `sha256:${hash}`,
-    publicVerificationUrl: `https://nawi-testflow.vercel.app/verify/${test.testNumber}`,
+    publicVerificationUrl: await buildVerificationUrl(payload),
     submissionTimestamp: new Date().toISOString(),
   };
 }

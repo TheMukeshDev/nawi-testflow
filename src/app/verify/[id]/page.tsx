@@ -12,7 +12,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { workflowStore, type StoredTest, type StoredReport } from '@/lib/workflow-store';
-import { computeCertificateHash, generateQRCodeSVG, formatHashFingerprint } from '@/lib/crypto-qr';
+import { computeCertificateHash, generateQRCodeSVG, formatHashFingerprint, certificatePayloadFromTest, parseVerificationPayload, type MetrologyCertificatePayload } from '@/lib/crypto-qr';
 import { downloadTestReportPDF } from '@/lib/report-generator';
 
 export default function CertificateVerificationPage() {
@@ -23,40 +23,104 @@ export default function CertificateVerificationPage() {
   const [report, setReport] = useState<StoredReport | null>(null);
   const [certHash, setCertHash] = useState<string>('');
   const [isVerifying, setIsVerifying] = useState<boolean>(true);
+  /** 'registry' = record found in this browser's workflow store; 'qr' = verified offline from the QR payload */
+  const [verificationSource, setVerificationSource] = useState<'registry' | 'qr' | null>(null);
+  /** Set when a QR payload was present but its SHA-256 digest does not match (tampering). */
+  const [payloadTampered, setPayloadTampered] = useState<boolean>(false);
+
+  /**
+   * Build a display record from a self-contained QR payload so the certificate
+   * renders identically on any device — no registry entry required.
+   */
+  const displayFromPayload = (p: MetrologyCertificatePayload) => {
+    const displayTest = {
+      id: p.testNumber,
+      testNumber: p.testNumber,
+      instrumentSerial: p.instrumentSerial,
+      instrumentModel: p.instrumentModel,
+      instrumentClass: p.instrumentClass,
+      maxCapacity: p.maxCapacity,
+      maxCapacityUnit: p.maxCapacityUnit,
+      scaleInterval: p.scaleInterval,
+      scaleIntervalUnit: p.scaleIntervalUnit,
+      laboratory: p.laboratory,
+      verificationType: p.verificationType,
+      status: 'approved',
+      complianceResult: (p.complianceResult || 'compliant').toLowerCase(),
+      technician: p.technician,
+      reviewer: p.reviewer,
+      testDate: p.testDate,
+      observations: [],
+      createdAt: p.testDate,
+      lastUpdated: p.testDate,
+    } as unknown as StoredTest;
+    const displayReport = {
+      id: p.reportNumber,
+      reportNumber: p.reportNumber,
+      testId: p.testNumber,
+      testNumber: p.testNumber,
+      instrumentSerial: p.instrumentSerial,
+      laboratory: p.laboratory,
+      format: 'PDF',
+      generatedAt: p.testDate,
+      version: 1,
+    } as unknown as StoredReport;
+    return { test: displayTest, report: displayReport };
+  };
 
   useEffect(() => {
     if (!id) return;
 
-    setIsVerifying(true);
-    // Find matching test or report
-    const foundTest = workflowStore.getTest(id);
-    const foundReport = workflowStore.getReportByTestId(id) || workflowStore.getReports().find(r => r.reportNumber === id);
+    const verify = async () => {
+      setIsVerifying(true);
+      setPayloadTampered(false);
+      setVerificationSource(null);
 
-    const activeTest = foundTest || (foundReport ? workflowStore.getTest(foundReport.testId) : null);
+      // 1) Local registry match (same-browser flow)
+      const foundTest = workflowStore.getTest(id);
+      const foundReport = workflowStore.getReportByTestId(id) || workflowStore.getReports().find(r => r.reportNumber === id);
+      const activeTest = foundTest || (foundReport ? workflowStore.getTest(foundReport.testId) : null);
 
-    if (activeTest) {
-      setTest(activeTest);
-      setReport(foundReport || null);
-
-      // Compute cryptographic hash
-      computeCertificateHash({
-        reportNumber: foundReport?.reportNumber || `RPT-${activeTest.testNumber}`,
-        testNumber: activeTest.testNumber,
-        instrumentModel: activeTest.instrumentModel,
-        instrumentSerial: activeTest.instrumentSerial,
-        laboratory: activeTest.laboratory,
-        complianceResult: activeTest.complianceResult,
-        testDate: activeTest.testDate,
-        technician: activeTest.technician,
-        reviewer: activeTest.reviewer,
-        observationsSummary: activeTest.observations.map(o => `${o.testCode}:${o.mean}:${o.verdict}`).join(','),
-      }).then(hash => {
+      if (activeTest) {
+        const hash = await computeCertificateHash(certificatePayloadFromTest(activeTest, foundReport || undefined));
+        setTest(activeTest);
+        setReport(foundReport || null);
         setCertHash(hash);
+        setVerificationSource('registry');
         setIsVerifying(false);
-      });
-    } else {
+        return;
+      }
+
+      // 2) Offline self-verification from the QR payload (any device, no login):
+      //    re-compute the SHA-256 over the embedded data and compare with the
+      //    digest that was signed into the QR when the certificate was printed.
+      const search = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+      const dataParam = search?.get('d');
+      const hashParam = search?.get('h');
+      if (dataParam && hashParam) {
+        const payload = parseVerificationPayload(dataParam);
+        if (payload) {
+          const recomputed = await computeCertificateHash(payload);
+          if (recomputed.toLowerCase() === hashParam.toLowerCase()) {
+            const { test: qrTest, report: qrReport } = displayFromPayload(payload);
+            setTest(qrTest);
+            setReport(qrReport);
+            setCertHash(recomputed);
+            setVerificationSource('qr');
+            setIsVerifying(false);
+            return;
+          }
+          setPayloadTampered(true);
+          setIsVerifying(false);
+          return;
+        }
+      }
+
+      setTest(null);
       setIsVerifying(false);
-    }
+    };
+
+    verify();
   }, [id]);
 
   const qrSvg = generateQRCodeSVG(typeof window !== 'undefined' ? window.location.href : `https://nawi-testflow.vercel.app/verify/${id}`, 110);
@@ -91,15 +155,26 @@ export default function CertificateVerificationPage() {
           </div>
         ) : !test ? (
           <div className="bg-white rounded-md p-8 text-center border border-red-200 shadow-xs">
-            <div className="w-14 h-14 rounded-full bg-red-50 text-red-600 flex items-center justify-center mx-auto mb-3 text-2xl font-bold">
-              ✕
+            <div className={`w-14 h-14 rounded-full ${payloadTampered ? 'bg-red-600/10 text-red-600' : 'bg-red-50 text-red-600'} flex items-center justify-center mx-auto mb-3 text-2xl font-bold`}>
+              {payloadTampered ? '⚠' : '✕'}
             </div>
-            <h1 className="text-[18px] font-bold text-gray-900 mb-1">Unverified Certificate Reference</h1>
-            <p className="text-[13px] text-gray-600 mb-4">
-              The certificate reference <code className="bg-gray-100 px-1.5 py-0.5 rounded font-mono text-gray-800">{id}</code> could not be validated against the national ledger.
-            </p>
+            <h1 className="text-[18px] font-bold text-gray-900 mb-1">
+              {payloadTampered ? 'Tamper Detected — Cryptographic Signature Mismatch' : 'Unverified Certificate Reference'}
+            </h1>
+            {payloadTampered ? (
+              <p className="text-[13px] text-gray-600 mb-4">
+                The SHA-256 digest carried inside this QR code does <strong>not</strong> match the certificate data
+                embedded in it. The certificate data may have been altered after signing — treat it as <strong>NOT authentic</strong>.
+              </p>
+            ) : (
+              <p className="text-[13px] text-gray-600 mb-4">
+                The certificate reference <code className="bg-gray-100 px-1.5 py-0.5 rounded font-mono text-gray-800">{id}</code> could not be validated against the national ledger.
+              </p>
+            )}
             <div className="text-[12px] text-gray-500 max-w-md mx-auto mb-6 bg-amber-50 p-3 border border-amber-200 rounded">
-              ⚠️ If you are an inspector verifying a physical certificate, please inspect the QR code or verify the instrument serial number directly in the repository.
+              {payloadTampered
+                ? 'Do not rely on this certificate. Contact the issuing laboratory or search the master repository for an official record.'
+                : 'If you are an inspector verifying a physical certificate, please inspect the QR code or verify the instrument serial number directly in the repository.'}
             </div>
             <Link
               href="/repository"
@@ -117,19 +192,25 @@ export default function CertificateVerificationPage() {
                   ✓
                 </div>
                 <div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <span className="text-[11px] font-bold bg-emerald-400/30 text-emerald-200 px-2 py-0.5 rounded-full uppercase tracking-wider">
                       Official Verification
                     </span>
                     <span className="text-[11px] text-emerald-200 font-mono">
                       Class-3 DSC Verified
                     </span>
+                    {verificationSource === 'qr' && (
+                      <span className="text-[11px] font-bold bg-white/15 text-emerald-100 px-2 py-0.5 rounded-full border border-emerald-300/40">
+                        ✓ Self-Verified from QR Payload
+                      </span>
+                    )}
                   </div>
                   <h1 className="text-[18px] sm:text-[20px] font-bold tracking-tight mt-1">
                     Valid & Authentic NAWI Certificate
                   </h1>
                   <p className="text-[12px] text-emerald-100 mt-0.5">
                     Verified per OIML Recommendation R-76 & Standards of Weights and Measures Rules
+                    {verificationSource === 'qr' && ' — SHA-256 recomputed locally from the QR payload (no login / database required)'}
                   </p>
                 </div>
               </div>

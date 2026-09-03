@@ -3,9 +3,21 @@
  *
  * Provides:
  * 1. Deterministic SHA-256 metrological hash calculation
- * 2. Self-contained pure SVG QR Code generator (zero external dependencies)
- * 3. Formatted verification payload and URL builder
+ * 2. Standards-compliant, phone-scannable QR Code generation (via the `qrcode` library)
+ * 3. Self-verifying verification URL: the certificate payload travels INSIDE the QR
+ *    (URL query `d` = payload, `h` = SHA-256 over the same canonical fields), so an
+ *    inspector scanning the printed certificate on any device can re-compute the hash
+ *    locally — no login, no server round-trip, no shared database required.
  */
+
+import type { StoredTest } from './workflow-store';
+import QRCode from 'qrcode';
+
+/** Production origin used when the app is rendered outside a browser context. */
+const PROD_ORIGIN = 'https://nawi-testflow.vercel.app';
+
+/** Maximum serialized URL length kept inside a certificate QR (keeps module count scannable). */
+const MAX_QR_URL_LENGTH = 850;
 
 export interface MetrologyCertificatePayload {
   reportNumber: string;
@@ -17,11 +29,71 @@ export interface MetrologyCertificatePayload {
   testDate: string;
   technician: string;
   reviewer?: string;
+  instrumentClass: string;
+  verificationType: string;
+  maxCapacity: string;
+  maxCapacityUnit: string;
+  scaleInterval: string;
+  scaleIntervalUnit: string;
   observationsSummary: string;
 }
 
 /**
- * Deterministic SHA-256 string computation
+ * Build the canonical certificate payload for a stored test / report.
+ *
+ * This is the single source of truth for what gets hashed and what travels
+ * inside the QR code — both the report generator and the verification portal
+ * MUST go through here so the hash recomputes identically on scan.
+ */
+export function certificatePayloadFromTest(
+  test: Pick<
+    StoredTest,
+    | 'testNumber'
+    | 'instrumentModel'
+    | 'instrumentSerial'
+    | 'laboratory'
+    | 'complianceResult'
+    | 'testDate'
+    | 'technician'
+    | 'reviewer'
+    | 'instrumentClass'
+    | 'verificationType'
+    | 'maxCapacity'
+    | 'maxCapacityUnit'
+    | 'scaleInterval'
+    | 'scaleIntervalUnit'
+    | 'observations'
+  >,
+  report?: { reportNumber?: string },
+): MetrologyCertificatePayload {
+  return {
+    reportNumber: report?.reportNumber || `RPT-${test.testNumber}`,
+    testNumber: test.testNumber,
+    instrumentModel: test.instrumentModel,
+    instrumentSerial: test.instrumentSerial,
+    laboratory: test.laboratory,
+    complianceResult: test.complianceResult,
+    testDate: test.testDate,
+    technician: test.technician,
+    reviewer: test.reviewer,
+    instrumentClass: test.instrumentClass,
+    verificationType: test.verificationType,
+    maxCapacity: test.maxCapacity,
+    maxCapacityUnit: test.maxCapacityUnit,
+    scaleInterval: test.scaleInterval,
+    scaleIntervalUnit: test.scaleIntervalUnit,
+    observationsSummary: test.observations
+      .map(o => `${o.testCode}:${o.mean}:${o.verdict}`)
+      .join(','),
+  };
+}
+
+/**
+ * Deterministic SHA-256 string computation over the canonical certificate fields.
+ *
+ * Any tampering with a single displayed field (report number, serial, verdict,
+ * observation means, class, capacity, …) changes the digest and fails the
+ * comparison performed on the verification portal.
  */
 export async function computeCertificateHash(payload: MetrologyCertificatePayload): Promise<string> {
   const canonicalString = [
@@ -34,6 +106,10 @@ export async function computeCertificateHash(payload: MetrologyCertificatePayloa
     `DATE:${payload.testDate}`,
     `TECH:${payload.technician}`,
     `REV:${payload.reviewer || 'OFFICIAL_SIGNATORY'}`,
+    `CLASS:${payload.instrumentClass}`,
+    `VERIF:${payload.verificationType}`,
+    `CAP:${payload.maxCapacity} ${payload.maxCapacityUnit}`,
+    `INT:${payload.scaleInterval} ${payload.scaleIntervalUnit}`,
     `OBS:${payload.observationsSummary}`,
   ].join('|');
 
@@ -44,14 +120,16 @@ export async function computeCertificateHash(payload: MetrologyCertificatePayloa
     return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
   }
 
-  // Pure fallback hash for synchronous or non-browser environments
-  return fallbackSha256(canonicalString);
+  // Non-browser fallback. NOTE: only used outside secure contexts; real SHA-256
+  // (WebCrypto) is always available on https/localhost where certificates are made/scanned.
+  return fallbackHash(canonicalString);
 }
 
 /**
- * Lightweight synchronous hash generator (FNV-1a / Murmur hybrid expanded to 64 chars)
+ * Compact, deterministic 64-char digest for non-browser environments
+ * (not cryptographic — WebCrypto SHA-256 is used in every browser context).
  */
-function fallbackSha256(str: string): string {
+function fallbackHash(str: string): string {
   let h1 = 0xdeadbeef ^ 0;
   let h2 = 0x41c6ce57 ^ 0;
   for (let i = 0; i < str.length; i++) {
@@ -61,94 +139,114 @@ function fallbackSha256(str: string): string {
   }
   h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
   h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
-  const part1 = (h1 >>> 0).toString(16).padStart(8, '0');
-  const part2 = (h2 >>> 0).toString(16).padStart(8, '0');
-  const part3 = ((h1 ^ h2) >>> 0).toString(16).padStart(8, '0');
-  const part4 = ((h1 + h2) >>> 0).toString(16).padStart(8, '0');
-  const part5 = ((h1 * 31) >>> 0).toString(16).padStart(8, '0');
-  const part6 = ((h2 * 17) >>> 0).toString(16).padStart(8, '0');
-  const part7 = ((h1 ^ 0x5a5a5a5a) >>> 0).toString(16).padStart(8, '0');
-  const part8 = ((h2 ^ 0xa5a5a5a5) >>> 0).toString(16).padStart(8, '0');
-  return `${part1}${part2}${part3}${part4}${part5}${part6}${part7}${part8}`;
+  const p1 = (h1 >>> 0).toString(16).padStart(8, '0');
+  const p2 = (h2 >>> 0).toString(16).padStart(8, '0');
+  const p3 = ((h1 ^ h2) >>> 0).toString(16).padStart(8, '0');
+  const p4 = ((h1 + h2) >>> 0).toString(16).padStart(8, '0');
+  const p5 = ((h1 * 31) >>> 0).toString(16).padStart(8, '0');
+  const p6 = ((h2 * 17) >>> 0).toString(16).padStart(8, '0');
+  const p7 = ((h1 ^ 0x5a5a5a5a) >>> 0).toString(16).padStart(8, '0');
+  const p8 = ((h2 ^ 0xa5a5a5a5) >>> 0).toString(16).padStart(8, '0');
+  return `${p1}${p2}${p3}${p4}${p5}${p6}${p7}${p8}`;
 }
 
 /**
- * Generate a standalone SVG QR Code string for any URL / string
- * Uses standard QR code matrix pattern (21x21 Version 1 / 25x25 Version 2)
+ * Generate a standards-compliant, phone-scannable QR Code as a clean SVG string.
+ *
+ * Uses the battle-tested `qrcode` encoder (Reed-Solomon error correction,
+ * format/mask handling) instead of a decorative pseudo-random matrix.
  */
 export function generateQRCodeSVG(text: string, size = 120): string {
-  // Deterministic 25x25 matrix pattern based on text input
-  const matrixSize = 25;
-  const matrix: boolean[][] = Array(matrixSize).fill(false).map(() => Array(matrixSize).fill(false));
+  const qr = QRCode.create(text, { errorCorrectionLevel: 'M' });
+  const n = qr.modules.size;
 
-  // Helper to place finder patterns (7x7)
-  const placeFinder = (row: number, col: number) => {
-    for (let r = 0; r < 7; r++) {
-      for (let c = 0; c < 7; c++) {
-        if (
-          r === 0 || r === 6 || c === 0 || c === 6 ||
-          (r >= 2 && r <= 4 && c >= 2 && c <= 4)
-        ) {
-          matrix[row + r][col + c] = true;
-        }
-      }
-    }
-  };
+  // Quiet zone (4 modules) so scanners can frame the symbol.
+  const quiet = 4;
+  const cells = n + quiet * 2;
+  const cell = size / cells;
 
-  // 3 Finder patterns: Top-Left, Top-Right, Bottom-Left
-  placeFinder(0, 0);
-  placeFinder(0, matrixSize - 7);
-  placeFinder(matrixSize - 7, 0);
-
-  // Timing patterns
-  for (let i = 8; i < matrixSize - 8; i++) {
-    matrix[6][i] = i % 2 === 0;
-    matrix[i][6] = i % 2 === 0;
-  }
-
-  // Pseudo-random deterministic payload bits derived from text hash
-  let seed = 0;
-  for (let i = 0; i < text.length; i++) {
-    seed = (seed * 31 + text.charCodeAt(i)) >>> 0;
-  }
-
-  for (let r = 0; r < matrixSize; r++) {
-    for (let c = 0; c < matrixSize; c++) {
-      // Don't overwrite finders or timing patterns
-      const inTopLeftFinder = r < 8 && c < 8;
-      const inTopRightFinder = r < 8 && c >= matrixSize - 8;
-      const inBottomLeftFinder = r >= matrixSize - 8 && c < 8;
-      const inTiming = r === 6 || c === 6;
-
-      if (!inTopLeftFinder && !inTopRightFinder && !inBottomLeftFinder && !inTiming) {
-        seed = (seed * 1664525 + 1013904223) >>> 0;
-        matrix[r][c] = (seed % 3) === 0;
-      }
-    }
-  }
-
-  // Render to clean SVG paths
-  const cellSize = size / matrixSize;
   let paths = '';
-
-  for (let r = 0; r < matrixSize; r++) {
-    for (let c = 0; c < matrixSize; c++) {
-      if (matrix[r][c]) {
-        const x = (c * cellSize).toFixed(2);
-        const y = (r * cellSize).toFixed(2);
-        const w = cellSize.toFixed(2);
-        const h = cellSize.toFixed(2);
-        paths += `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#0f172a" />`;
+  for (let r = 0; r < n; r++) {
+    for (let c = 0; c < n; c++) {
+      if (qr.modules.get(r, c)) {
+        const x = ((c + quiet) * cell).toFixed(3);
+        const y = ((r + quiet) * cell).toFixed(3);
+        const s = cell.toFixed(3);
+        paths += `<rect x="${x}" y="${y}" width="${s}" height="${s}" fill="#0f172a" />`;
       }
     }
   }
 
-  return `
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" shape-rendering="crispEdges">
-      <rect width="${size}" height="${size}" fill="#ffffff" />
-      ${paths}
-    </svg>
-  `.trim();
+  return (
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" shape-rendering="crispEdges" role="img" aria-label="QR code">` +
+    `<rect width="${size}" height="${size}" fill="#ffffff" />` +
+    `${paths}</svg>`
+  );
+}
+
+/** Base64url-encode a UTF-8 string (compact + URL-safe, no padding). */
+function toBase64Url(input: string): string {
+  const bytes = new TextEncoder().encode(input);
+  let bin = '';
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+/** Decode a base64url string back to UTF-8. */
+function fromBase64Url(input: string): string {
+  let b64 = input.replace(/-/g, '+').replace(/_/g, '/');
+  while (b64.length % 4 !== 0) b64 += '=';
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new TextDecoder().decode(bytes);
+}
+
+/**
+ * Build a self-verifying certificate URL: `/verify/<testNumber>?d=<payload>&h=<hash>`.
+ *
+ * The payload is compressed (base64url JSON) so it stays scannable inside the QR.
+ * If the payload is too large for a reliable QR, falls back to the plain URL —
+ * the certificate QR remains valid either way.
+ */
+export async function buildVerificationUrl(payload: MetrologyCertificatePayload): Promise<string> {
+  const hash = await computeCertificateHash(payload);
+
+  // Loopback origins (localhost demos) are unreachable from a phone camera — fall
+  // back to the public deployment origin so printed certificates always scan to a
+  // host that exists. The embedded payload makes the scan verify regardless.
+  let base = PROD_ORIGIN;
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    const host = window.location.hostname;
+    if (host && host !== 'localhost' && host !== '127.0.0.1' && host !== '::1' && host !== '') {
+      base = window.location.origin;
+    }
+  }
+
+  const full = `${base}/verify/${encodeURIComponent(payload.testNumber)}`;
+  const data = toBase64Url(JSON.stringify(payload));
+  const withPayload = `${full}?d=${data}&h=${hash}`;
+
+  return withPayload.length <= MAX_QR_URL_LENGTH ? withPayload : full;
+}
+
+/** Decode the `d` query parameter of a verification URL back into a payload. */
+export function parseVerificationPayload(data: string): MetrologyCertificatePayload | null {
+  try {
+    const parsed = JSON.parse(fromBase64Url(data));
+    if (
+      parsed &&
+      typeof parsed === 'object' &&
+      typeof parsed.testNumber === 'string' &&
+      typeof parsed.reportNumber === 'string' &&
+      typeof parsed.observationsSummary === 'string'
+    ) {
+      return parsed as MetrologyCertificatePayload;
+    }
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 /**

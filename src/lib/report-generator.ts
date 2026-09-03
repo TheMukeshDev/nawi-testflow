@@ -9,11 +9,15 @@
  */
 
 import type { StoredTest, StoredReport } from './workflow-store';
-import { generateQRCodeSVG } from './crypto-qr';
+import { certificatePayloadFromTest, buildVerificationUrl, generateQRCodeSVG } from './crypto-qr';
 import { generateDigitalSignatureStampHTML } from './pki-signer';
 
-export function printTestReport(test: StoredTest, report?: StoredReport): void {
+export async function printTestReport(test: StoredTest, report?: StoredReport): Promise<void> {
   if (typeof window === 'undefined') return;
+
+  // Self-verifying QR: certificate data + SHA-256 digest travel inside the code,
+  // so a scan on ANY device can re-compute and confirm the hash — no login needed.
+  const qrText = await buildVerificationUrl(certificatePayloadFromTest(test, report));
 
   const printWindow = window.open('', '_blank', 'width=900,height=900');
   if (!printWindow) {
@@ -21,7 +25,7 @@ export function printTestReport(test: StoredTest, report?: StoredReport): void {
     return;
   }
 
-  const html = generateReportHTML(test, report);
+  const html = generateReportHTML(test, report, qrText);
   printWindow.document.write(html);
   printWindow.document.close();
   printWindow.focus();
@@ -33,7 +37,7 @@ export function printTestReport(test: StoredTest, report?: StoredReport): void {
 
 export function downloadTestReportPDF(test: StoredTest, report?: StoredReport): void {
   // Use high quality print view window configured for Save as PDF
-  printTestReport(test, report);
+  void printTestReport(test, report);
 }
 
 export function downloadTestReportDOCX(test: StoredTest, report?: StoredReport): void {
@@ -138,9 +142,14 @@ export function downloadTestReportDOCX(test: StoredTest, report?: StoredReport):
   URL.revokeObjectURL(url);
 }
 
-function generateReportHTML(test: StoredTest, report?: StoredReport): string {
+function generateReportHTML(test: StoredTest, report?: StoredReport, qrText?: string): string {
   const reportNo = report?.reportNumber || `RPT-${test.testNumber}`;
   const isPass = test.complianceResult === 'compliant';
+  const verifyBase =
+    typeof window !== 'undefined' && window.location?.origin
+      ? window.location.origin
+      : 'https://nawi-testflow.vercel.app';
+  const certificateQrText = qrText || `${verifyBase}/verify/${encodeURIComponent(test.testNumber)}`;
 
   return `
     <!DOCTYPE html>
@@ -356,7 +365,7 @@ function generateReportHTML(test: StoredTest, report?: StoredReport): string {
             </span>
           </div>
           <div style="padding: 3px; background: white; border: 1px solid #cbd5e1; border-radius: 4px; text-align: center;">
-            ${generateQRCodeSVG(`https://nawi-testflow.vercel.app/verify/${encodeURIComponent(test.testNumber)}`, 74)}
+            ${generateQRCodeSVG(certificateQrText, 150)}
             <div style="font-size: 5.5pt; color: #475569; font-family: monospace; font-weight: bold; margin-top: 1px;">SCAN TO VERIFY</div>
           </div>
         </div>
