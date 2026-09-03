@@ -273,9 +273,11 @@ export default function NewTestPage() {
   };
 
   const next = () => {
-    if (step === 3) {
-      // Build observations from selected tests — preserve existing data
+    if (step === 2) {
+      // Leaving Test Selection → build observation blocks so they are
+      // visible immediately on the Observations screen. Preserve entered data.
       const selectedTests = tests.filter(t => t.selected);
+      const selectedCodes = new Set(selectedTests.map(t => t.code));
       if (observations.length === 0) {
         // Create one observation per selected test
         const newObs: ObservationEntry[] = [];
@@ -293,9 +295,12 @@ export default function NewTestPage() {
         });
         setObservations(newObs);
       } else {
-        // Sync: keep existing observations, add new ones for newly selected tests
-        const existingCodes = new Set(observations.map(o => o.testCode));
-        const newObs: ObservationEntry[] = [...observations];
+        // Sync: keep entered values, add blocks for newly selected tests,
+        // drop blocks for deselected tests
+        const newObs: ObservationEntry[] = observations.filter(o =>
+          selectedCodes.has(o.testCode),
+        );
+        const existingCodes = new Set(newObs.map(o => o.testCode));
         selectedTests.forEach(t => {
           if (!existingCodes.has(t.code)) {
             newObs.push({

@@ -31,6 +31,3 @@ dev = [
 
 [tool.vercel]
 entrypoint = "api.index:app"
-
-[tool.vercel.scripts]
-build = "echo 'no-op'"

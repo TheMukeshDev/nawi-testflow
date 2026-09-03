@@ -117,13 +117,19 @@ interface SidebarProps {
 
 export function Sidebar({ collapsed = false }: SidebarProps) {
   const pathname = usePathname();
-  const { user, userRole, logout } = useAuth();
+  const { user, userRole, logout, getRoleRedirectPath } = useAuth();
+
+  // Dashboard always lands on the signed-in role's home (tester → /tester,
+  // reviewer → /reviewer, …) instead of the public landing page.
+  const dashboardHref = getRoleRedirectPath();
 
   // Filter nav items based on user role
   const navItems = ALL_NAV_ITEMS.filter(item => {
     if (!userRole) return false;
     return item.requiredRoles.includes(userRole);
-  });
+  }).map(item =>
+    item.label === 'Dashboard' ? { ...item, href: dashboardHref } : item,
+  );
 
   // Get user initials
   const getInitials = (name: string) => {
@@ -175,8 +181,9 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
       {/* Navigation Items */}
       <nav className="flex-1 overflow-y-auto py-1 px-1">
         {navItems.map(item => {
-          const isActive = item.href === '/'
-            ? pathname === '/'
+          const isDashboard = item.label === 'Dashboard';
+          const isActive = isDashboard
+            ? pathname === dashboardHref
             : pathname.startsWith(item.href);
 
           return (

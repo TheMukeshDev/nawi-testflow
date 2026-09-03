@@ -54,12 +54,17 @@ interface MobileNavProps {
 
 export function MobileNav({ open, onClose }: MobileNavProps) {
   const pathname = usePathname();
-  const { user, userRole, logout } = useAuth();
+  const { user, userRole, logout, getRoleRedirectPath } = useAuth();
+
+  // Dashboard always lands on the signed-in role's home, not the public landing page.
+  const dashboardHref = getRoleRedirectPath();
 
   const navItems = ALL_NAV_ITEMS.filter(item => {
     if (!userRole) return false;
     return item.requiredRoles.includes(userRole);
-  });
+  }).map(item =>
+    item.label === 'Dashboard' ? { ...item, href: dashboardHref } : item,
+  );
 
   const getInitials = (name: string) => name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   const displayName = user?.full_name || user?.email || 'User';
@@ -91,7 +96,8 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
         {/* Nav items */}
         <nav className="flex-1 overflow-y-auto py-1 px-1">
           {navItems.map(item => {
-            const isActive = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href);
+            const isDashboard = item.label === 'Dashboard';
+            const isActive = isDashboard ? pathname === dashboardHref : pathname.startsWith(item.href);
             return (
               <Link
                 key={item.href}
