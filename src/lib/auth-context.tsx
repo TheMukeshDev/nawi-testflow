@@ -85,41 +85,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchUserProfile = async (userId: string) => {
     try {
-      // Try fetching from backend API first
-      const response = await fetch(`/api/v1/users/${userId}`, {
-        credentials: 'include',
-      });
-      
-      if (response.ok) {
-        const profile = await response.json();
-        setUser({
-          id: userId,
-          email: profile.email,
-          full_name: profile.full_name,
-          role: profile.role || 'viewer',
-          laboratory_id: profile.laboratory_id,
-        });
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, email, full_name, role, laboratory_id, is_active')
+        .eq('auth_user_id', userId)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Failed to fetch profile:', error);
+        throw error;
+      }
+
+      if (data?.is_active === false) {
+        setUser(null);
         return;
       }
-    } catch (error) {
-      // API not available — fall through to session data
-    }
 
-    // Fallback: derive profile from the Supabase session
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const su = session?.user as any;
-      if (su) {
-        setUser({
-          id: su.id,
-          email: su.email,
-          full_name: su.full_name,
-          role: su.role || 'viewer',
-          laboratory_id: su.laboratory_id,
-        });
+      setUser({
+        id: userId,
+        email: data?.email || '',
+        full_name: data?.full_name || undefined,
+        role: (data?.role as UserRole) || 'viewer',
+        laboratory_id: data?.laboratory_id || undefined,
+      });
+    } catch (error) {
+      // Fallback: derive minimal profile from the Supabase session
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const su = session?.user as any;
+        if (su) {
+          setUser({
+            id: su.id,
+            email: su.email,
+            full_name: su.user_metadata?.full_name || su.email,
+            role: su.user_metadata?.role || 'viewer',
+            laboratory_id: su.user_metadata?.laboratory_id,
+          });
+        }
+      } catch (err) {
+        console.error('Failed to derive user profile:', err);
       }
-    } catch (err) {
-      console.error('Failed to derive user profile:', err);
     }
   };
 

@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: nawi-testflow-api
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: SUPABASE_URL
+        value: https://zsjxiwmofjndlccedjtc.supabase.co
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_ALGORITHM
+        value: HS256
+      - key: JWT_EXPIRATION_MINUTES
+        value: "60"
+      - key: CORS_ORIGINS
+        value: '["https://nawi-testflow.vercel.app"]'
+      - key: DATABASE_URL
+        sync: false
