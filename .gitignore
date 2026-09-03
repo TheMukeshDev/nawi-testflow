@@ -1,0 +1,74 @@
+# Dependencies
+node_modules/
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Next.js
+.next/
+out/
+*.tsbuildinfo
+
+# Build
+dist/
+build/
+coverage/
+
+# Environment (never commit secrets)
+.env
+.env.*
+!.env.example
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Generated reports (runtime data)
+reports/
+generated/
+
+# Uploaded files
+uploads/
+attachments/
+
+# Database
+*.db
+*.sqlite
+
+# Private keys
+*.pem
+*.key
+service-account*.json
+
+# Python
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# Supabase
+supabase/.temp/
+supabase/.branches/
+
+# Local tooling / scratch
+.freebuff/
+.history/
+.tmp/
+
+# Python build/dist
+*.whl
+*.tar.gz

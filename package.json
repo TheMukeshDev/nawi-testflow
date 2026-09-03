@@ -1,0 +1,27 @@
+{
+  "name": "nawi-testflow",
+  "version": "0.1.0",
+  "description": "NAWI Test Report Generation System — OIML R-76 Compliance",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --turbopack",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.114.0",
+    "next": "15.3.4",
+    "react": "19.1.0",
+    "react-dom": "19.1.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.12",
+    "@types/node": "^24.0.10",
+    "@types/react": "^19.1.8",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^4.1.12",
+    "typescript": "^5.8.3"
+  }
+}

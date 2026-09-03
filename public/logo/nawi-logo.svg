@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 48" fill="none">
+  <!-- Scale/metrology symbol -->
+  <g transform="translate(4, 4)">
+    <!-- Fulcrum -->
+    <line x1="20" y1="4" x2="20" y2="36" stroke="#1e3a5f" stroke-width="2" stroke-linecap="round"/>
+    <!-- Base -->
+    <line x1="10" y1="36" x2="30" y2="36" stroke="#1e3a5f" stroke-width="2" stroke-linecap="round"/>
+    <!-- Beam -->
+    <line x1="2" y1="12" x2="38" y2="12" stroke="#1e3a5f" stroke-width="2" stroke-linecap="round"/>
+    <!-- Left pan -->
+    <path d="M2 12 L0 20 Q2 22 6 20 L4 12" stroke="#1e3a5f" stroke-width="1.5" fill="none"/>
+    <ellipse cx="3" cy="20" rx="5" ry="2" stroke="#1e3a5f" stroke-width="1.5" fill="none"/>
+    <!-- Right pan -->
+    <path d="M36 12 L34 20 Q36 22 40 20 L38 12" stroke="#1e3a5f" stroke-width="1.5" fill="none"/>
+    <ellipse cx="37" cy="20" rx="5" ry="2" stroke="#1e3a5f" stroke-width="1.5" fill="none"/>
+    <!-- Pointer -->
+    <polygon points="20,4 18,8 22,8" fill="#1e3a5f"/>
+  </g>
+  <!-- NAWI text -->
+  <text x="56" y="30" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="26" font-weight="700" fill="#1e3a5f" letter-spacing="-0.5">NAWI</text>
+  <!-- Subtitle -->
+  <text x="56" y="42" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="9" font-weight="500" fill="#64748b" letter-spacing="1.5">TEST REPORT SYSTEM</text>
+</svg>

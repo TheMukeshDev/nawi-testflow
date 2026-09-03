@@ -1,0 +1,255 @@
+/**
+ * NAWI TestFlow — Equipment Detail Page
+ *
+ * View equipment details, calibration information, and status.
+ */
+
+'use client';
+
+import React from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { Shell } from '@/components/layout/Shell';
+import { PageHeader } from '@/components/layout/PageHeader';
+import { Button } from '@/components/ui/Button';
+import { Badge } from '@/components/ui/Badge';
+import { Alert } from '@/components/ui/Alert';
+import { FieldSet } from '@/components/ui/FormControls';
+import { getCalibrationStatus, getCalibrationStatusConfig } from '@/components/forms/EquipmentForm';
+
+// ============================================================================
+// TYPES
+// ============================================================================
+
+interface EquipmentDetail {
+  id: string;
+  equipmentId: string;
+  name: string;
+  type: string;
+  manufacturer: string;
+  model: string;
+  serialNumber: string;
+  calibrationDate: string;
+  calibrationValidUntil: string;
+  calibrationCertificateRef: string;
+  laboratoryId: string;
+  laboratoryCode: string;
+  laboratoryName: string;
+  condition: 'good' | 'needs-repair' | 'out-of-service';
+  notes: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ============================================================================
+// MOCK DATA
+// ============================================================================
+
+const MOCK_EQUIPMENT: EquipmentDetail = {
+  id: '1',
+  equipmentId: 'WTS-E2-001',
+  name: 'E2 Calibration Weight Set',
+  type: 'Standard Weight',
+  manufacturer: 'Sartorius',
+  model: 'PTA',
+  serialNumber: 'WTS-E2-001',
+  calibrationDate: '2026-03-15',
+  calibrationValidUntil: '2027-03-15',
+  calibrationCertificateRef: 'CAL-2026-00123',
+  laboratoryId: '1',
+  laboratoryCode: 'NPL-DL-01',
+  laboratoryName: 'National Physical Laboratory — Delhi',
+  condition: 'good',
+  notes: 'Primary E2 weight set for Class II and Class III verification testing.',
+  createdAt: '2026-03-15T00:00:00Z',
+  updatedAt: '2026-09-01T00:00:00Z',
+};
+
+// ============================================================================
+// HELPER COMPONENTS
+// ============================================================================
+
+function DetailRow({ label, value, mono = false }: {
+  label: string;
+  value: string | number | null | undefined;
+  mono?: boolean;
+}) {
+  return (
+    <div className="flex items-baseline gap-2 py-1.5">
+      <span className="text-[12px] text-gray-500 w-[180px] shrink-0">{label}</span>
+      <span className={`text-[13px] text-gray-900 ${mono ? 'font-mono text-[12px]' : ''}`}>
+        {value !== null && value !== undefined && value !== ''
+          ? value
+          : <span className="text-gray-400">—</span>
+        }
+      </span>
+    </div>
+  );
+}
+
+function cn(...classes: (string | boolean | undefined | null)[]) {
+  return classes.filter(Boolean).join(' ');
+}
+
+// ============================================================================
+// PAGE COMPONENT
+// ============================================================================
+
+export default function EquipmentDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const router = useRouter();
+  const { id } = React.use(params);
+  const equipment = MOCK_EQUIPMENT;
+
+  const calibrationStatus = getCalibrationStatus(equipment.calibrationDate, equipment.calibrationValidUntil);
+  const statusConfig = getCalibrationStatusConfig(calibrationStatus);
+
+  const daysUntilExpiry = equipment.calibrationValidUntil
+    ? Math.ceil((new Date(equipment.calibrationValidUntil).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+    : null;
+
+  const conditionConfig = {
+    good: { color: 'success' as const, label: 'Good' },
+    'needs-repair': { color: 'warning' as const, label: 'Needs Repair' },
+    'out-of-service': { color: 'danger' as const, label: 'Out of Service' },
+  };
+
+  return (
+    <Shell breadcrumbs={[
+      { label: 'Equipment', href: '/equipment' },
+      { label: equipment.equipmentId, current: true },
+    ]}>
+      <PageHeader
+        title={equipment.name}
+        subtitle={`Equipment ID: ${equipment.equipmentId}`}
+        actions={
+          <div className="flex items-center gap-2">
+            <Link href={`/equipment/${equipment.id}/edit`}>
+              <Button variant="secondary" size="md">Edit</Button>
+            </Link>
+          </div>
+        }
+      >
+        <div className="flex items-center gap-3">
+          <Badge color={conditionConfig[equipment.condition].color} variant="subtle">
+            {conditionConfig[equipment.condition].label}
+          </Badge>
+          <Badge color={statusConfig.color} variant={statusConfig.variant}>
+            {statusConfig.label}
+          </Badge>
+        </div>
+      </PageHeader>
+
+      {/* ── Calibration Warnings ── */}
+      {calibrationStatus === 'expired' && (
+        <div className="mb-4">
+          <Alert type="error" title="Calibration Expired">
+            This equipment's calibration expired on {new Date(equipment.calibrationValidUntil).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}.
+            It should not be used for testing until recalibrated.
+          </Alert>
+        </div>
+      )}
+      {calibrationStatus === 'due-soon' && daysUntilExpiry !== null && (
+        <div className="mb-4">
+          <Alert type="warning" title={`Calibration Due in ${daysUntilExpiry} Days`}>
+            This equipment's calibration will expire on {new Date(equipment.calibrationValidUntil).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}.
+            Please schedule recalibration.
+          </Alert>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* ── Left Column: Details ── */}
+        <div className="lg:col-span-2 space-y-4">
+          {/* ── Equipment Identification ── */}
+          <FieldSet legend="Equipment Identification">
+            <DetailRow label="Equipment ID" value={equipment.equipmentId} mono />
+            <DetailRow label="Name" value={equipment.name} />
+            <DetailRow label="Type" value={equipment.type} />
+            <DetailRow label="Manufacturer" value={equipment.manufacturer} />
+            <DetailRow label="Model" value={equipment.model} />
+            <DetailRow label="Serial Number" value={equipment.serialNumber} mono />
+          </FieldSet>
+
+          {/* ── Calibration Information ── */}
+          <FieldSet legend="Calibration Information">
+            <DetailRow
+              label="Calibration Date"
+              value={equipment.calibrationDate
+                ? new Date(equipment.calibrationDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+                : null
+              }
+            />
+            <DetailRow
+              label="Valid Until"
+              value={equipment.calibrationValidUntil
+                ? new Date(equipment.calibrationValidUntil).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+                : null
+              }
+            />
+            <DetailRow label="Certificate Reference" value={equipment.calibrationCertificateRef} mono />
+            
+            {/* Days until expiry */}
+            {daysUntilExpiry !== null && (
+              <div className="mt-3 p-3 bg-gray-50 rounded-md">
+                <div className="flex items-center justify-between">
+                  <span className="text-[12px] text-gray-600">Time Remaining</span>
+                  <span className={cn(
+                    'text-[14px] font-semibold',
+                    daysUntilExpiry < 0 ? 'text-danger-600' :
+                    daysUntilExpiry <= 30 ? 'text-warning-600' :
+                    'text-success-600'
+                  )}>
+                    {daysUntilExpiry < 0
+                      ? `Expired ${Math.abs(daysUntilExpiry)} days ago`
+                      : `${daysUntilExpiry} days remaining`
+                    }
+                  </span>
+                </div>
+                {/* Progress bar */}
+                <div className="mt-2 h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <div
+                    className={cn(
+                      'h-full rounded-full',
+                      daysUntilExpiry < 0 ? 'bg-danger-500' :
+                      daysUntilExpiry <= 30 ? 'bg-warning-500' :
+                      'bg-success-500'
+                    )}
+                    style={{ width: `${Math.min(100, Math.max(0, (daysUntilExpiry / 365) * 100))}%` }}
+                  />
+                </div>
+              </div>
+            )}
+          </FieldSet>
+
+          {/* ── Notes ── */}
+          {equipment.notes && (
+            <FieldSet legend="Notes">
+              <p className="text-[13px] text-gray-700 leading-relaxed">{equipment.notes}</p>
+            </FieldSet>
+          )}
+        </div>
+
+        {/* ── Right Column: Meta ── */}
+        <div className="space-y-4">
+          {/* ── Laboratory ── */}
+          <FieldSet legend="Laboratory">
+            <DetailRow label="Laboratory" value={equipment.laboratoryName} />
+            <DetailRow label="Code" value={equipment.laboratoryCode} mono />
+          </FieldSet>
+
+          {/* ── Record Info ── */}
+          <FieldSet legend="Record Information">
+            <DetailRow
+              label="Created"
+              value={new Date(equipment.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+            />
+            <DetailRow
+              label="Last Updated"
+              value={new Date(equipment.updatedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+            />
+          </FieldSet>
+        </div>
+      </div>
+    </Shell>
+  );
+}
