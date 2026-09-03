@@ -10,6 +10,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import type { UserRole } from '@/types';
 import { hasRole, hasPermission, filterNavByRole, NAV_ITEMS, type NavItem } from './auth';
 import { supabase } from './supabase/client';
@@ -56,7 +57,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      async (event: AuthChangeEvent, session: Session | null) => {
         if (event === 'SIGNED_IN' && session) {
           await fetchUserProfile(session.user.id);
         } else if (event === 'SIGNED_OUT') {
