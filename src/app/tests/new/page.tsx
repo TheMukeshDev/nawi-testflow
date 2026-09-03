@@ -18,6 +18,7 @@ import { todayISO } from '@/lib/dates';
 import { workflowStore, type StoredTest } from '@/lib/workflow-store';
 import { TestResultModal } from '@/components/workflow/TestResultModal';
 import { downloadTestReportPDF, downloadTestReportDOCX } from '@/lib/report-generator';
+import { SerialReaderModal } from '@/components/equipment/SerialReaderModal';
 
 // ═══════════════════════════════════════════════════════════════
 // TYPES
@@ -207,6 +208,7 @@ export default function NewTestPage() {
   const [calcResult, setCalcResult] = useState<{ test: string; mean: string; stddev: string; result: string }[] | null>(null);
   const [submittedTest, setSubmittedTest] = useState<StoredTest | null>(null);
   const [showResultModal, setShowResultModal] = useState(false);
+  const [serialTarget, setSerialTarget] = useState<{ oi: number; vi: number; label: string } | null>(null);
   const calculatedRef = useRef<number>(-1);
 
   const handleSubmitForReview = () => {
@@ -630,22 +632,55 @@ export default function NewTestPage() {
         {/* STEP 3: Observations */}
         {step === 3 && (
           <div>
-            <h2 className="text-[15px] font-semibold text-gray-900 mb-1">Test Observations</h2>
-            <p className="text-[12px] text-gray-500 mb-5">Enter measured values for each test</p>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+              <div>
+                <h2 className="text-[15px] font-semibold text-gray-900 mb-0.5">Test Observations</h2>
+                <p className="text-[12px] text-gray-500">Enter measured values manually or stream directly via digital scale</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  if (observations.length > 0) {
+                    setSerialTarget({ oi: 0, vi: 0, label: `${observations[0].testName} - Reading 1` });
+                  }
+                }}
+                className="px-3 py-1.5 bg-[#1e3a5f] hover:bg-[#162d4a] text-white text-[12px] font-medium rounded-sm inline-flex items-center gap-1.5 transition-colors shadow-2xs self-start sm:self-auto cursor-pointer"
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="2" y="2" width="20" height="8" rx="2" ry="2" />
+                  <rect x="2" y="14" width="20" height="8" rx="2" ry="2" />
+                  <line x1="6" y1="6" x2="6.01" y2="6" strokeWidth="3" />
+                  <line x1="6" y1="18" x2="6.01" y2="18" strokeWidth="3" />
+                </svg>
+                Connect Digital Scale (RS-232 / USB)
+              </button>
+            </div>
             {observations.length === 0 ? (
               <p className="text-[13px] text-gray-400 text-center py-8">No tests selected. Go back to select tests.</p>
             ) : (
               <div className="space-y-6">
                 {observations.map((obs, oi) => (
                   <div key={obs.id} className="border border-gray-200 rounded-sm p-4">
-                    <div className="flex items-center gap-2 mb-3">
-                      <span className="text-[13px] font-semibold text-gray-900">{obs.testName}</span>
-                      <span className="text-[11px] font-mono text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">{obs.testCode}</span>
+                    <div className="flex items-center justify-between gap-2 mb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[13px] font-semibold text-gray-900">{obs.testName}</span>
+                        <span className="text-[11px] font-mono text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">{obs.testCode}</span>
+                      </div>
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
                       {obs.measuredValues.map((val, vi) => (
                         <div key={vi}>
-                          <label className="block text-[10px] text-gray-500 mb-1">Reading {vi + 1}</label>
+                          <div className="flex items-center justify-between mb-1">
+                            <label className="block text-[10px] text-gray-500">Reading {vi + 1}</label>
+                            <button
+                              type="button"
+                              onClick={() => setSerialTarget({ oi, vi, label: `${obs.testName} (${obs.testCode}) - Reading ${vi + 1}` })}
+                              className="text-[9.5px] text-[#1e3a5f] hover:underline flex items-center gap-0.5 cursor-pointer font-medium"
+                              title="Capture directly from digital scale via RS-232"
+                            >
+                              ⚡ Scale
+                            </button>
+                          </div>
                           <Input
                             value={val}
                             onChange={v => {
@@ -829,6 +864,20 @@ export default function NewTestPage() {
           )}
         </div>
       </div>
+
+      <SerialReaderModal
+        open={serialTarget !== null}
+        onClose={() => setSerialTarget(null)}
+        targetFieldLabel={serialTarget?.label}
+        expectedCapacity={instrument.maxCapacity || '3000'}
+        onCaptureWeight={(weight) => {
+          if (serialTarget) {
+            const newObs = [...observations];
+            newObs[serialTarget.oi].measuredValues[serialTarget.vi] = weight;
+            setObservations(newObs);
+          }
+        }}
+      />
     </DashboardLayout>
   );
 }

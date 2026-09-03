@@ -29,14 +29,25 @@ if not os.environ.get("GEMINI_API_KEY") and settings.GEMINI_API_KEY:
 if not os.environ.get("GEMINI_MODEL") and settings.GEMINI_MODEL:
     os.environ["GEMINI_MODEL"] = settings.GEMINI_MODEL
 
+from fastapi.openapi.docs import get_redoc_html
+
 # Create FastAPI app
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
     description="OIML R-76 NAWI Test Report Generation System",
     docs_url="/api/docs",
-    redoc_url="/api/redoc",
+    redoc_url=None,
 )
+
+@app.get("/api/redoc", include_in_schema=False)
+async def custom_redoc_html():
+    """Interactive ReDoc documentation using stable Redocly CDN bundle."""
+    return get_redoc_html(
+        openapi_url="/openapi.json",
+        title=f"{settings.APP_NAME} — ReDoc API Documentation",
+        redoc_js_url="https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js",
+    )
 
 # CORS middleware
 app.add_middleware(

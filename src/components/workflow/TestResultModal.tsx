@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/Button';
 import { TestStatusBadge, ComplianceBadge } from '@/components/ui/StatusBadge';
 import { downloadTestReportPDF, downloadTestReportDOCX, printTestReport } from '@/lib/report-generator';
 import { workflowStore, type StoredTest, type StoredReport } from '@/lib/workflow-store';
+import { DocaPortalModal } from './DocaPortalModal';
 
 interface TestResultModalProps {
   open: boolean;
@@ -34,6 +35,7 @@ export function TestResultModal({
   const [reviewNotes, setReviewNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [actionSuccess, setActionSuccess] = useState<'approved' | 'rejected' | null>(null);
+  const [showDocaModal, setShowDocaModal] = useState(false);
 
   if (!open || !test) return null;
 
@@ -287,12 +289,38 @@ export function TestResultModal({
               </svg>
               Print
             </button>
+
+            <button
+              onClick={() => setShowDocaModal(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-[12px] font-medium rounded transition-colors shadow-2xs cursor-pointer"
+              title="Push to Ministry of Consumer Affairs National Portal"
+            >
+              <span>🏛️ e-Maap Gateway</span>
+            </button>
+
+            <a
+              href={`/verify/${encodeURIComponent(test.testNumber)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 text-[12px] font-medium rounded transition-colors"
+              title="Inspect Public Cryptographic Ledger Verification"
+            >
+              <span>🔍 Verify QR</span>
+            </a>
           </div>
 
           <Button variant="secondary" size="md" onClick={onClose}>
             Close
           </Button>
         </div>
+
+        {/* e-Maap National Portal Integration Modal */}
+        <DocaPortalModal
+          open={showDocaModal}
+          onClose={() => setShowDocaModal(false)}
+          test={test}
+          report={report}
+        />
       </div>
     </div>
   );

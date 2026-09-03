@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 import type { BreadcrumbItem } from '@/types';
 
 import { NotificationDropdown } from './NotificationDropdown';
+import { useOfflineSync } from '@/lib/offline-sync';
 
 interface TopBarProps {
   breadcrumbs?: BreadcrumbItem[];
@@ -24,6 +25,7 @@ interface TopBarProps {
 export function TopBar({ breadcrumbs = [], onMenuToggle, onSelectTest }: TopBarProps) {
   const [searchQuery, setSearchQuery] = React.useState('');
   const [searchFocused, setSearchFocused] = React.useState(false);
+  const { isOnline, pendingCount } = useOfflineSync();
 
   return (
     <header className="flex items-center h-[48px] bg-white border-b border-gray-200 px-3 sm:px-4 shrink-0">
@@ -87,6 +89,20 @@ export function TopBar({ breadcrumbs = [], onMenuToggle, onSelectTest }: TopBarP
             ⌘K
           </kbd>
         </div>
+      </div>
+
+      {/* Network Connectivity Status Indicator */}
+      <div
+        className="mr-2 sm:mr-3 hidden md:flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-mono border transition-colors select-none"
+        style={{
+          borderColor: isOnline ? '#e2e8f0' : '#f59e0b',
+          backgroundColor: isOnline ? '#f8fafc' : '#fef3c7',
+          color: isOnline ? '#475569' : '#92400e',
+        }}
+        title={isOnline ? 'Network Online — Connected to Central Metrology Server' : 'Offline Mode — Changes Saved to Local Browser Cache'}
+      >
+        <span className={`w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'}`} />
+        <span>{isOnline ? 'Online' : pendingCount > 0 ? `${pendingCount} Local` : 'Offline'}</span>
       </div>
 
       {/* Workflow Notification Dropdown */}

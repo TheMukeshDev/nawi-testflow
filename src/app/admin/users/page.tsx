@@ -7,7 +7,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { RouteGuard } from '@/components/auth/RouteGuard';
 import { Badge } from '@/components/ui/Badge';
@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/FormControls';
 import { Dialog } from '@/components/ui/Dialog';
 import { Alert } from '@/components/ui/Alert';
+import { supabaseDb, type DbUser } from '@/lib/supabase-db';
 
 interface UserRecord {
   id: string;
@@ -123,6 +124,14 @@ export default function AdminUsersPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [actionMessage, setActionMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
+  useEffect(() => {
+    supabaseDb.getUsers().then(dbUsers => {
+      if (dbUsers && dbUsers.length > 0) {
+        setUsers(dbUsers);
+      }
+    });
+  }, []);
+
   const filteredUsers = users.filter(u => {
     const matchSearch = !search ||
       u.fullName.toLowerCase().includes(search.toLowerCase()) ||
@@ -147,7 +156,7 @@ export default function AdminUsersPage() {
     setModalOpen(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formData.fullName.trim() || !formData.email.trim()) {
       setFormError('Name and email are required.');
       return;
@@ -158,36 +167,65 @@ export default function AdminUsersPage() {
     }
 
     if (modalMode === 'add') {
-      const newUser: UserRecord = {
-        id: `usr-${Date.now()}`,
+      const tempPassword = `Nawi#${Math.floor(1000 + Math.random() * 9000)}@Lab`;
+
+      const created = await supabaseDb.createUser({
         email: formData.email.trim(),
         fullName: formData.fullName.trim(),
         role: formData.role as UserRecord['role'],
         laboratory: formData.laboratory,
         isActive: true,
-        lastLogin: '',
-        createdAt: new Date().toISOString().split('T')[0],
-      };
-      setUsers(prev => [...prev, newUser]);
-      setActionMessage({ type: 'success', text: `User "${newUser.fullName}" added successfully.` });
+      });
+
+      if (created) {
+        setUsers(prev => [created, ...prev]);
+
+        // Dispatch welcome email via Gmail SMTP
+        fetch('/api/auth/welcome-user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: created.email,
+            fullName: created.fullName,
+            role: created.role,
+            laboratory: created.laboratory,
+            password: tempPassword,
+          }),
+        }).catch(err => console.warn('[AdminUsers] Email send error:', err));
+
+        setActionMessage({
+          type: 'success',
+          text: `User "${created.fullName}" saved to Supabase & login credentials emailed to ${created.email} (Password: ${tempPassword}).`,
+        });
+      }
     } else if (editingUser) {
+      const updated = {
+        fullName: formData.fullName.trim(),
+        role: formData.role as UserRecord['role'],
+      };
+
+      await supabaseDb.updateUser(editingUser.id, updated);
+
       setUsers(prev => prev.map(u =>
         u.id === editingUser.id
           ? { ...u, fullName: formData.fullName.trim(), email: formData.email.trim(), role: formData.role as UserRecord['role'], laboratory: formData.laboratory }
           : u
       ));
-      setActionMessage({ type: 'success', text: `User "${formData.fullName.trim()}" updated successfully.` });
+      setActionMessage({ type: 'success', text: `User "${formData.fullName.trim()}" updated and saved to Supabase database.` });
     }
     setModalOpen(false);
   };
 
-  const toggleActive = (user: UserRecord) => {
+  const toggleActive = async (user: UserRecord) => {
+    const newActiveState = !user.isActive;
+    await supabaseDb.updateUser(user.id, { isActive: newActiveState });
+
     setUsers(prev => prev.map(u =>
-      u.id === user.id ? { ...u, isActive: !u.isActive } : u
+      u.id === user.id ? { ...u, isActive: newActiveState } : u
     ));
     setActionMessage({
       type: 'success',
-      text: `User "${user.fullName}" ${user.isActive ? 'deactivated' : 'activated'}.`,
+      text: `User "${user.fullName}" ${newActiveState ? 'activated' : 'deactivated'} in database.`,
     });
   };
 

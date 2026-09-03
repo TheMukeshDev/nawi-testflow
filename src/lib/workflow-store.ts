@@ -410,6 +410,24 @@ export const workflowStore = {
     tests.unshift(newTest);
     saveData(STORAGE_KEYS.TESTS, tests);
 
+    // Persist to Supabase test_reports
+    if (isBrowser()) {
+      fetch('/api/db/test_reports', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          report_number: newTest.testNumber,
+          verification_type: 'subsequent',
+          test_standard: 'OIML R-76',
+          test_standard_version: '2009',
+          status: 'pending-review',
+          compliance_result: newTest.complianceResult,
+          created_at: newTest.createdAt,
+          updated_at: newTest.lastUpdated,
+        }),
+      }).catch(err => console.warn('[WorkflowStore] Supabase save err:', err));
+    }
+
     // Notify Reviewer role
     this.addNotification({
       title: 'New Test Awaiting Approval',
@@ -436,6 +454,21 @@ export const workflowStore = {
     test.lastUpdated = new Date().toISOString();
     tests[index] = test;
     saveData(STORAGE_KEYS.TESTS, tests);
+
+    // Persist approval to Supabase
+    if (isBrowser()) {
+      fetch(`/api/db/test_reports?id=${encodeURIComponent(test.id)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: 'approved',
+          compliance_result: 'compliant',
+          compliance_notes: notes,
+          reviewed_at: new Date().toISOString(),
+          completed_at: new Date().toISOString(),
+        }),
+      }).catch(err => console.warn('[WorkflowStore] Supabase approve err:', err));
+    }
 
     // Create generated report entry
     const reports = this.getReports();
@@ -483,6 +516,19 @@ export const workflowStore = {
     tests[index] = test;
     saveData(STORAGE_KEYS.TESTS, tests);
 
+    // Persist rejection to Supabase
+    if (isBrowser()) {
+      fetch(`/api/db/test_reports?id=${encodeURIComponent(test.id)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: 'rejected',
+          compliance_notes: reason,
+          reviewed_at: new Date().toISOString(),
+        }),
+      }).catch(err => console.warn('[WorkflowStore] Supabase reject err:', err));
+    }
+
     // Notify Tester
     this.addNotification({
       title: 'Revision Requested by Reviewer',
@@ -495,6 +541,33 @@ export const workflowStore = {
     });
 
     return test;
+  },
+
+  async syncFromSupabase(): Promise<void> {
+    if (!isBrowser()) return;
+    try {
+      const res = await fetch('/api/db/test_reports?select=*&order=created_at.desc');
+      if (res.ok) {
+        const rows = await res.json();
+        if (Array.isArray(rows) && rows.length > 0) {
+          const currentTests = this.getTests();
+          let modified = false;
+          for (const row of rows) {
+            const match = currentTests.find(t => t.id === row.id || t.testNumber === row.report_number);
+            if (match) {
+              const mappedStatus = row.status === 'approved' ? 'completed' : row.status === 'rejected' ? 'revision-requested' : match.status;
+              if (match.status !== mappedStatus) {
+                match.status = mappedStatus;
+                modified = true;
+              }
+            }
+          }
+          if (modified) {
+            saveData(STORAGE_KEYS.TESTS, currentTests);
+          }
+        }
+      }
+    } catch {}
   },
 
   // Reports

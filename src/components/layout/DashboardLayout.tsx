@@ -8,12 +8,14 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { useRouter } from 'next/navigation';
 import { Sidebar } from './Sidebar';
 import { MobileNav } from './MobileNav';
 import { TopBar } from './TopBar';
+import { OfflineSyncBanner } from './OfflineSyncBanner';
+import { workflowStore } from '@/lib/workflow-store';
 import type { BreadcrumbItem } from '@/types';
 
 interface DashboardLayoutProps {
@@ -26,6 +28,10 @@ export function DashboardLayout({ children, breadcrumbs = [], onSelectTest }: Da
   const { isLoading, isAuthenticated } = useAuth();
   const router = useRouter();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
+  useEffect(() => {
+    workflowStore.syncFromSupabase();
+  }, []);
 
   if (isLoading) {
     return (
@@ -55,6 +61,7 @@ export function DashboardLayout({ children, breadcrumbs = [], onSelectTest }: Da
 
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
         <TopBar breadcrumbs={breadcrumbs} onMenuToggle={() => setMobileNavOpen(true)} onSelectTest={onSelectTest} />
+        <OfflineSyncBanner />
         <main className="flex-1 overflow-y-auto">
           <div className="px-4 sm:px-6 py-5 max-w-[1400px]">
             {children}
