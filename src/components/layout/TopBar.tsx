@@ -13,12 +13,15 @@ import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import type { BreadcrumbItem } from '@/types';
 
+import { NotificationDropdown } from './NotificationDropdown';
+
 interface TopBarProps {
   breadcrumbs?: BreadcrumbItem[];
   onMenuToggle?: () => void;
+  onSelectTest?: (testId: string, mode: 'view' | 'review') => void;
 }
 
-export function TopBar({ breadcrumbs = [], onMenuToggle }: TopBarProps) {
+export function TopBar({ breadcrumbs = [], onMenuToggle, onSelectTest }: TopBarProps) {
   const [searchQuery, setSearchQuery] = React.useState('');
   const [searchFocused, setSearchFocused] = React.useState(false);
 
@@ -84,6 +87,11 @@ export function TopBar({ breadcrumbs = [], onMenuToggle }: TopBarProps) {
             ⌘K
           </kbd>
         </div>
+      </div>
+
+      {/* Workflow Notification Dropdown */}
+      <div className="mr-2 sm:mr-3">
+        <NotificationDropdown onSelectTest={onSelectTest} />
       </div>
 
       {/* New Test */}

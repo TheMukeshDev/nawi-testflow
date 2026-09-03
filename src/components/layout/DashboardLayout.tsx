@@ -19,9 +19,10 @@ import type { BreadcrumbItem } from '@/types';
 interface DashboardLayoutProps {
   children: React.ReactNode;
   breadcrumbs?: BreadcrumbItem[];
+  onSelectTest?: (testId: string, mode: 'view' | 'review') => void;
 }
 
-export function DashboardLayout({ children, breadcrumbs = [] }: DashboardLayoutProps) {
+export function DashboardLayout({ children, breadcrumbs = [], onSelectTest }: DashboardLayoutProps) {
   const { isLoading, isAuthenticated } = useAuth();
   const router = useRouter();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -53,7 +54,7 @@ export function DashboardLayout({ children, breadcrumbs = [] }: DashboardLayoutP
       <MobileNav open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
 
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
-        <TopBar breadcrumbs={breadcrumbs} onMenuToggle={() => setMobileNavOpen(true)} />
+        <TopBar breadcrumbs={breadcrumbs} onMenuToggle={() => setMobileNavOpen(true)} onSelectTest={onSelectTest} />
         <main className="flex-1 overflow-y-auto">
           <div className="px-4 sm:px-6 py-5 max-w-[1400px]">
             {children}

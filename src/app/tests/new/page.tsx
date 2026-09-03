@@ -15,6 +15,9 @@ import { useAuth } from '@/lib/auth-context';
 import { AiAssistBox } from '@/components/ai/AiAssistBox';
 import { localExplain } from '@/lib/ai';
 import { todayISO } from '@/lib/dates';
+import { workflowStore, type StoredTest } from '@/lib/workflow-store';
+import { TestResultModal } from '@/components/workflow/TestResultModal';
+import { downloadTestReportPDF, downloadTestReportDOCX } from '@/lib/report-generator';
 
 // ═══════════════════════════════════════════════════════════════
 // TYPES
@@ -193,6 +196,7 @@ function Input({ value, onChange, placeholder, unit, type = 'text', disabled }: 
 // ═══════════════════════════════════════════════════════════════
 
 export default function NewTestPage() {
+  const { user } = useAuth();
   const [step, setStep] = useState(0);
   const [completed, setCompleted] = useState<number[]>([]);
   const [instrument, setInstrument] = useState<InstrumentData>({ ...INITIAL_INSTRUMENT });
@@ -201,7 +205,52 @@ export default function NewTestPage() {
   const [observations, setObservations] = useState<ObservationEntry[]>([]);
   const [showResult, setShowResult] = useState(false);
   const [calcResult, setCalcResult] = useState<{ test: string; mean: string; stddev: string; result: string }[] | null>(null);
+  const [submittedTest, setSubmittedTest] = useState<StoredTest | null>(null);
+  const [showResultModal, setShowResultModal] = useState(false);
   const calculatedRef = useRef<number>(-1);
+
+  const handleSubmitForReview = () => {
+    const formattedObs = observations.map((obs, i) => {
+      const calc = calcResult?.[i];
+      return {
+        testName: obs.testName,
+        testCode: obs.testCode,
+        readings: obs.measuredValues.filter(v => v.trim() !== ''),
+        mean: calc?.mean || '0.00',
+        stddev: calc?.stddev || '0.00',
+        verdict: (calc?.result === 'FAIL' ? 'FAIL' : 'PASS') as 'PASS' | 'FAIL',
+        unit: obs.unit,
+        notes: obs.notes,
+      };
+    });
+
+    const newTest = workflowStore.submitNewTest({
+      instrument: {
+        manufacturer: instrument.manufacturer,
+        model: instrument.model,
+        serialNumber: instrument.serialNumber,
+        instrumentClass: instrument.instrumentClass,
+        maxCapacity: instrument.maxCapacity,
+        maxCapacityUnit: instrument.maxCapacityUnit,
+        scaleInterval: instrument.scaleInterval,
+        scaleIntervalUnit: instrument.scaleIntervalUnit,
+        verificationScaleInterval: instrument.verificationScaleInterval,
+        softwareVersion: instrument.softwareVersion,
+      },
+      conditions: {
+        temperature: conditions.temperature,
+        humidity: conditions.humidity,
+        airPressure: conditions.airPressure,
+        testLocation: conditions.testLocation,
+        testDate: conditions.testDate,
+        laboratoryName: conditions.laboratoryName,
+      },
+      observations: formattedObs,
+      technicianName: user?.full_name || 'Priya Mehta',
+    });
+
+    setSubmittedTest(newTest);
+  };
 
   // Rule-based explanations (Tier 1 — no AI, computed from the actual
   // calculation values + demo rule reference). Gemini is only used when the
@@ -325,6 +374,91 @@ export default function NewTestPage() {
   const toggleTest = (code: string) => {
     setTests(tests.map(t => t.code === code ? { ...t, selected: !t.selected } : t));
   };
+
+  if (submittedTest) {
+    return (
+      <DashboardLayout breadcrumbs={[{ label: 'Test Reports', href: '/tests' }, { label: 'Submitted' }]}>
+        <div className="max-w-2xl mx-auto py-6">
+          <div className="bg-white border border-gray-200 rounded-md p-6 sm:p-8 text-center shadow-xs">
+            <div className="w-14 h-14 bg-green-50 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4 border border-green-200">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+
+            <h1 className="text-[20px] font-bold text-gray-900 mb-1">
+              Test Report Successfully Submitted
+            </h1>
+            <p className="text-[13px] text-gray-500 mb-5">
+              Record ref: <span className="font-mono font-bold text-gray-900">{submittedTest.testNumber}</span> &bull; {submittedTest.instrumentModel}
+            </p>
+
+            <div className="bg-blue-50/70 border border-blue-200 rounded-sm p-4 mb-6 text-left text-[12.5px] space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600 font-medium">Workflow Status:</span>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                  PENDING REVIEW
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600 font-medium">Compliance Verdict:</span>
+                <span className={`font-bold ${submittedTest.complianceResult === 'compliant' ? 'text-green-700' : 'text-red-700'}`}>
+                  {submittedTest.complianceResult.toUpperCase()}
+                </span>
+              </div>
+              <div className="pt-2 border-t border-blue-200/60 text-blue-900 leading-relaxed">
+                🔔 <strong>Notification dispatched:</strong> Reviewer (Dr. K. Sharma) has been notified. This report is now waiting in the Review Queue on the Reviewer Dashboard for verification and approval.
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-wrap items-center justify-center gap-2.5 mb-6">
+              <button
+                onClick={() => setShowResultModal(true)}
+                className="px-4 py-2 bg-[#1e3a5f] hover:bg-[#162d4a] text-white text-[13px] font-medium rounded-sm transition-colors shadow-xs"
+              >
+                View Complete Results
+              </button>
+
+              <button
+                onClick={() => downloadTestReportPDF(submittedTest)}
+                className="px-4 py-2 bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 text-[13px] font-medium rounded-sm transition-colors inline-flex items-center gap-1.5"
+              >
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <path d="M7 1.5v8m0 0L4 6.5m3 3l3-3M2 11.5h10" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                Download PDF
+              </button>
+
+              <button
+                onClick={() => downloadTestReportDOCX(submittedTest)}
+                className="px-4 py-2 bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 text-[13px] font-medium rounded-sm transition-colors"
+              >
+                Download DOCX
+              </button>
+            </div>
+
+            <div className="pt-4 border-t border-gray-100 flex items-center justify-center gap-4 text-[12px]">
+              <Link href="/tests" className="text-primary-600 hover:underline font-medium">
+                ← Go to Test Reports List
+              </Link>
+              <span className="text-gray-300">|</span>
+              <Link href="/reviewer" className="text-primary-600 hover:underline font-medium">
+                Open Reviewer Dashboard →
+              </Link>
+            </div>
+          </div>
+        </div>
+
+        <TestResultModal
+          open={showResultModal}
+          onClose={() => setShowResultModal(false)}
+          test={submittedTest}
+        />
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout breadcrumbs={[{ label: 'Test Reports', href: '/tests' }, { label: 'New Test' }]}>
@@ -687,11 +821,8 @@ export default function NewTestPage() {
             </button>
           ) : (
             <button
-              onClick={() => {
-                alert('Test report submitted for review.\n\nIn production, this would:\n1. Save the complete test record\n2. Change status to PENDING_REVIEW\n3. Notify the reviewer\n4. Redirect to the test reports list');
-                window.location.href = '/tests';
-              }}
-              className="px-5 py-2 bg-green-600 text-white text-[13px] font-medium rounded-sm hover:bg-green-700 transition-colors"
+              onClick={handleSubmitForReview}
+              className="px-5 py-2 bg-green-600 text-white text-[13px] font-medium rounded-sm hover:bg-green-700 transition-colors shadow-xs"
             >
               Submit for Review
             </button>

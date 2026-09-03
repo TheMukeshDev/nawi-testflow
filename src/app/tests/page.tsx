@@ -1,14 +1,14 @@
 /**
  * NAWI TestFlow — Tests List Page
  *
- * Primary view for managing all tests.
- * Filter tabs at the top: All / Drafts / In Testing / Pending Review / Completed
- * Full DataTable with all relevant columns.
+ * Primary view for managing all test records.
+ * Connected to live workflow store for real-time status transitions,
+ * viewing completed results, and downloading reports.
  */
 
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Shell } from '@/components/layout/Shell';
 import { PageHeader } from '@/components/layout/PageHeader';
@@ -16,181 +16,163 @@ import { DataTable, FilterTabs, type ColumnDef } from '@/components/ui/DataTable
 import { Button } from '@/components/ui/Button';
 import { TestStatusBadge, ComplianceBadge } from '@/components/ui/StatusBadge';
 import { NoResults } from '@/components/ui/EmptyState';
-import type { TestStatus, ComplianceVerdict, PaginationState, SortState } from '@/types';
+import type { PaginationState, SortState } from '@/types';
 import { TEST_STATUS_FILTERS } from '@/lib/constants';
-
-// ── Mock Data ──
-interface TestRecord {
-  id: string;
-  testNumber: string;
-  instrumentSerial: string;
-  instrumentModel: string;
-  instrumentClass: string;
-  laboratory: string;
-  verificationType: string;
-  status: TestStatus;
-  complianceResult: ComplianceVerdict;
-  technician: string;
-  createdAt: string;
-  lastUpdated: string;
-}
-
-const MOCK_TESTS: TestRecord[] = [
-  {
-    id: '1',
-    testNumber: 'TR-2026-001',
-    instrumentSerial: 'ABC-2026-EL-00412',
-    instrumentModel: 'ABC-3000 Electronic Balance',
-    instrumentClass: 'III',
-    laboratory: 'CMTL-PY-01',
-    verificationType: 'Initial',
-    status: 'pending-review',
-    complianceResult: 'pending',
-    technician: 'Priya Mehta',
-    createdAt: '2026-09-01T08:00:00Z',
-    lastUpdated: '2026-09-02T14:30:00Z',
-  },
-  {
-    id: '2',
-    testNumber: 'TR-2026-002',
-    instrumentSerial: 'PWS-2025-PR-00089',
-    instrumentModel: 'PWS Precision Scale 220',
-    instrumentClass: 'II',
-    laboratory: 'CMTL-PY-01',
-    verificationType: 'Subsequent',
-    status: 'in-testing',
-    complianceResult: 'pending',
-    technician: 'Priya Mehta',
-    createdAt: '2026-09-01T10:15:00Z',
-    lastUpdated: '2026-09-02T11:15:00Z',
-  },
-  {
-    id: '3',
-    testNumber: 'TR-2026-003',
-    instrumentSerial: 'ABC-2025-EL-00589',
-    instrumentModel: 'ABC-220 Analytical Balance',
-    instrumentClass: 'II',
-    laboratory: 'CMTL-PY-01',
-    verificationType: 'Initial',
-    status: 'completed',
-    complianceResult: 'compliant',
-    technician: 'Rajesh Nair',
-    createdAt: '2026-08-28T09:00:00Z',
-    lastUpdated: '2026-09-01T10:00:00Z',
-  },
-  {
-    id: '4',
-    testNumber: 'TR-2026-004',
-    instrumentSerial: 'MST-2024-EL-00247',
-    instrumentModel: 'MetroScale 2000 Industrial',
-    instrumentClass: 'III',
-    laboratory: 'PITL-PR-02',
-    verificationType: 'Initial',
-    status: 'completed',
-    complianceResult: 'non-compliant',
-    technician: 'Rajesh Nair',
-    createdAt: '2026-08-27T14:00:00Z',
-    lastUpdated: '2026-08-31T15:30:00Z',
-  },
-  {
-    id: '5',
-    testNumber: 'TR-2026-005',
-    instrumentSerial: 'PWS-2025-PL-00334',
-    instrumentModel: 'PWS Platform Scale 3000',
-    instrumentClass: 'III',
-    laboratory: 'PITL-PR-02',
-    verificationType: 'Subsequent',
-    status: 'draft',
-    complianceResult: 'pending',
-    technician: 'Suresh Iyer',
-    createdAt: '2026-08-26T11:00:00Z',
-    lastUpdated: '2026-08-26T11:00:00Z',
-  },
-];
-
-const COLUMNS: ColumnDef<TestRecord>[] = [
-  {
-    key: 'testNumber',
-    header: 'Test No.',
-    mono: true,
-    sortable: true,
-    width: 145,
-  },
-  {
-    key: 'instrumentSerial',
-    header: 'Instrument',
-    mono: true,
-    width: 140,
-  },
-  {
-    key: 'instrumentModel',
-    header: 'Model',
-    width: 150,
-  },
-  {
-    key: 'instrumentClass',
-    header: 'Class',
-    width: 70,
-    align: 'center',
-  },
-  {
-    key: 'laboratory',
-    header: 'Laboratory',
-    width: 100,
-  },
-  {
-    key: 'verificationType',
-    header: 'Verification',
-    width: 110,
-  },
-  {
-    key: 'status',
-    header: 'Status',
-    sortable: true,
-    width: 150,
-    render: (_, row) => <TestStatusBadge status={row.status} />,
-  },
-  {
-    key: 'complianceResult',
-    header: 'Compliance',
-    width: 120,
-    render: (_, row) => <ComplianceBadge verdict={row.complianceResult} />,
-  },
-  {
-    key: 'technician',
-    header: 'Technician',
-    width: 120,
-  },
-  {
-    key: 'lastUpdated',
-    header: 'Updated',
-    sortable: true,
-    width: 120,
-    render: (_, row) => {
-      const d = new Date(row.lastUpdated);
-      return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-    },
-  },
-];
+import { workflowStore, type StoredTest } from '@/lib/workflow-store';
+import { downloadTestReportPDF } from '@/lib/report-generator';
+import { TestResultModal } from '@/components/workflow/TestResultModal';
+import { useAuth } from '@/lib/auth-context';
 
 export default function TestsPage() {
-  const [activeFilter, setActiveFilter] = React.useState('all');
-  const [pagination] = React.useState<PaginationState>({
-    page: 1,
-    pageSize: 25,
-    total: MOCK_TESTS.length,
-  });
-  const [sort] = React.useState<SortState>({ key: 'lastUpdated', direction: 'desc' });
+  const { userRole } = useAuth();
+  const [tests, setTests] = useState<StoredTest[]>([]);
+  const [activeFilter, setActiveFilter] = useState('all');
+  const [selectedTest, setSelectedTest] = useState<StoredTest | null>(null);
+  const [modalMode, setModalMode] = useState<'view' | 'review'>('view');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [sort] = useState<SortState>({ key: 'lastUpdated', direction: 'desc' });
+
+  const refreshTests = () => {
+    setTests(workflowStore.getTests());
+  };
+
+  useEffect(() => {
+    refreshTests();
+    const unsubscribe = workflowStore.subscribe(() => {
+      refreshTests();
+    });
+    return unsubscribe;
+  }, []);
+
+  const openTestModal = (test: StoredTest, mode: 'view' | 'review' = 'view') => {
+    setSelectedTest(test);
+    setModalMode(mode);
+    setIsModalOpen(true);
+  };
+
+  const handleDownloadPDF = (e: React.MouseEvent, test: StoredTest) => {
+    e.stopPropagation();
+    downloadTestReportPDF(test);
+  };
 
   const filteredData = activeFilter === 'all'
-    ? MOCK_TESTS
-    : MOCK_TESTS.filter(t => t.status === activeFilter);
+    ? tests
+    : tests.filter(t => t.status === activeFilter);
+
+  const pagination: PaginationState = {
+    page: 1,
+    pageSize: 25,
+    total: filteredData.length,
+  };
+
+  const COLUMNS: ColumnDef<StoredTest>[] = [
+    {
+      key: 'testNumber',
+      header: 'Test No.',
+      mono: true,
+      sortable: true,
+      width: 135,
+    },
+    {
+      key: 'instrumentSerial',
+      header: 'Instrument',
+      mono: true,
+      width: 140,
+    },
+    {
+      key: 'instrumentModel',
+      header: 'Model',
+      width: 160,
+    },
+    {
+      key: 'instrumentClass',
+      header: 'Class',
+      width: 70,
+      align: 'center',
+    },
+    {
+      key: 'laboratory',
+      header: 'Laboratory',
+      width: 100,
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      sortable: true,
+      width: 140,
+      render: (_, row) => <TestStatusBadge status={row.status} />,
+    },
+    {
+      key: 'complianceResult',
+      header: 'Compliance',
+      width: 120,
+      render: (_, row) => <ComplianceBadge verdict={row.complianceResult} />,
+    },
+    {
+      key: 'technician',
+      header: 'Technician',
+      width: 110,
+    },
+    {
+      key: 'lastUpdated',
+      header: 'Updated',
+      sortable: true,
+      width: 100,
+      render: (_, row) => {
+        try {
+          return new Date(row.lastUpdated).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+        } catch {
+          return '—';
+        }
+      },
+    },
+    {
+      key: 'actions',
+      header: 'Actions',
+      width: 170,
+      align: 'right',
+      render: (_, row) => {
+        const isPending = row.status === 'pending-review';
+        const isCompleted = row.status === 'completed' || row.status === 'approved';
+        const canReview = isPending && (userRole === 'reviewer' || userRole === 'admin');
+
+        return (
+          <div className="flex items-center justify-end gap-1.5" onClick={e => e.stopPropagation()}>
+            <button
+              onClick={() => openTestModal(row, canReview ? 'review' : 'view')}
+              className="px-2 py-1 bg-white hover:bg-gray-100 text-[#1e3a5f] border border-gray-300 rounded text-[11px] font-medium transition-colors cursor-pointer"
+              title="View Test Observations & Details"
+            >
+              {canReview ? 'Review' : 'View'}
+            </button>
+
+            <button
+              onClick={(e) => handleDownloadPDF(e, row)}
+              className="px-2 py-1 bg-[#1e3a5f] hover:bg-[#162d4a] text-white rounded text-[11px] font-medium transition-colors shadow-2xs cursor-pointer inline-flex items-center gap-1"
+              title="Download PDF Test Report"
+            >
+              <svg width="11" height="11" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <path d="M7 1.5v8m0 0L4 6.5m3 3l3-3M2 11.5h10" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              PDF
+            </button>
+          </div>
+        );
+      },
+    },
+  ];
 
   return (
-    <Shell breadcrumbs={[{ label: 'Tests', current: true }]}>
+    <Shell
+      breadcrumbs={[{ label: 'Tests', current: true }]}
+      onSelectTest={(testId, mode) => {
+        const test = workflowStore.getTest(testId);
+        if (test) openTestModal(test, mode);
+      }}
+    >
       <PageHeader
         title="Tests"
-        subtitle="Manage NAWI test records per OIML R-76"
+        subtitle="Manage Non-Automatic Weighing Instrument (NAWI) test records per OIML R-76"
         actions={
           <Link href="/tests/new">
             <Button variant="primary" size="md">
@@ -205,7 +187,7 @@ export default function TestsPage() {
         <FilterTabs
           tabs={TEST_STATUS_FILTERS.map(f => ({
             ...f,
-            count: f.value === 'all' ? MOCK_TESTS.length : MOCK_TESTS.filter(t => t.status === f.value).length,
+            count: f.value === 'all' ? tests.length : tests.filter(t => t.status === f.value).length,
           }))}
           active={activeFilter}
           onChange={setActiveFilter}
@@ -219,11 +201,20 @@ export default function TestsPage() {
         rowKey={(row) => row.id}
         sort={sort}
         pagination={pagination}
-        onRowClick={(row) => console.log('Navigate to test:', row.id)}
-        selectable
-        onSelectionChange={(keys) => console.log('Selected:', keys)}
+        onRowClick={(row) => openTestModal(row)}
         emptyState={<NoResults />}
         caption="NAWI test records"
+      />
+
+      {/* ── Test Result Modal ── */}
+      <TestResultModal
+        open={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        test={selectedTest}
+        mode={modalMode}
+        onActionComplete={() => {
+          refreshTests();
+        }}
       />
     </Shell>
   );

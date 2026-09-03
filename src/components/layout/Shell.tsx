@@ -12,11 +12,12 @@ import type { BreadcrumbItem } from '@/types';
 interface ShellProps {
   children: React.ReactNode;
   breadcrumbs?: BreadcrumbItem[];
+  onSelectTest?: (testId: string, mode: 'view' | 'review') => void;
 }
 
-export function Shell({ children, breadcrumbs = [] }: ShellProps) {
+export function Shell({ children, breadcrumbs = [], onSelectTest }: ShellProps) {
   return (
-    <DashboardLayout breadcrumbs={breadcrumbs}>
+    <DashboardLayout breadcrumbs={breadcrumbs} onSelectTest={onSelectTest}>
       {children}
     </DashboardLayout>
   );
