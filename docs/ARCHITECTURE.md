@@ -494,12 +494,18 @@ docker run -d -p 5432:5432 -e POSTGRES_PASSWORD=dev postgres:16
 ### 10.2 Production
 
 ```
-Frontend: Vercel (Next.js)
-Backend: Railway / Fly.io (FastAPI)
+Frontend: Vercel (Next.js, repo root, root vercel.json)
+Backend:  Vercel (Python serverless, Root Directory = backend/,
+          entrypoint api.index:app via [tool.vercel] in pyproject.toml,
+          maxDuration 60 + tests/demo excluded in backend/vercel.json)
 Database: Supabase (PostgreSQL)
 Auth: Supabase Auth
 Storage: Supabase Storage
 ```
+
+Deploy order: backend first (note its URL) → frontend with
+`NEXT_PUBLIC_API_URL=<backend-url>` → add the frontend URL to the
+backend's `CORS_ORIGINS` (comma-separated env var).
 
 ---
 
@@ -508,10 +514,12 @@ Storage: Supabase Storage
 ### Frontend (.env.local)
 
 ```env
-NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
+NEXT_PUBLIC_API_URL=http://localhost:8000
 NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 ```
+
+(`NEXT_PUBLIC_API_URL` is the backend base URL — code appends `/api/v1`.)
 
 ### Backend (.env)
 
@@ -521,4 +529,8 @@ SUPABASE_URL=your-supabase-url
 SUPABASE_SERVICE_KEY=your-service-key
 JWT_SECRET=your-jwt-secret
 STORAGE_BUCKET=nawi-attachments
+CORS_ORIGINS=http://localhost:3000,https://<frontend>.vercel.app
+GEMINI_API_KEY=your-gemini-key
+GEMINI_MODEL=gemini-2.0-flash
+AI_ASSISTANCE_ENABLED=true
 ```

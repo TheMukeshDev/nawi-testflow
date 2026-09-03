@@ -371,25 +371,47 @@ For SIH mentor demonstrations:
 
 ## Deployment
 
-### Frontend (Vercel)
+Two Vercel projects share this repo (each auto-deploys on push to `master`).
 
-1. Push repository to GitHub
-2. Import the repository in Vercel
-3. Set the root directory to the project root (or `frontend/` if using monorepo structure)
-4. Add environment variables
-5. Deploy
-6. Set `NEXT_PUBLIC_API_URL` to your backend URL
-7. Verify authentication flow
+### Backend API (Vercel, Python serverless)
 
-### Backend (Render / Railway)
+1. In Vercel, **Add New → Project → Import** this repository, then set the **Root Directory to `backend/`**
+2. Vercel detects Python (`requires-python >=3.12`, `.python-version`), installs `requirements.txt`, and serves the FastAPI app as a single function via the entrypoint `api.index:app` (declared in `backend/pyproject.toml` → `[tool.vercel]`)
+3. Function config lives in `backend/vercel.json`: `maxDuration: 60` (covers Gemini latency + PDF generation), `tests/` + `demo/` excluded from the bundle
+4. Add environment variables (Production + Preview):
 
-1. Create a new web service
-2. Connect your GitHub repository
-3. Set the root directory to `backend/`
-4. Add environment variables
-5. Set the start command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
-6. Deploy
-7. Verify the `/api/health` endpoint returns `{"status": "healthy"}`
+| Variable | Required | Purpose |
+|----------|----------|---------|
+| `SUPABASE_URL` | Yes | Supabase project URL |
+| `SUPABASE_SERVICE_ROLE_KEY` | Yes | Server-side data access (never expose to browser) |
+| `CORS_ORIGINS` | Yes | Comma-separated frontend origins, e.g. `https://nawi-testflow.vercel.app` (browsers block the API otherwise) |
+| `JWT_SECRET` | Yes | Change from default in production |
+| `GEMINI_API_KEY` | Optional | Enables on-demand "Enhance with AI" (also settable from Settings UI) |
+| `GEMINI_MODEL` | Optional | Default `gemini-2.0-flash` |
+| `AI_ASSISTANCE_ENABLED` | Optional | Default `true`; admin can toggle in System Settings |
+
+5. Deploy, then verify `https://<backend>.vercel.app/api/health` returns `{"status": "healthy"}` and `…/api/docs` loads
+
+### Frontend (Vercel, Next.js)
+
+1. **Add New → Project → Import** the same repository with **Root Directory `./`** (uses root `vercel.json`)
+2. Add environment variables:
+
+| Variable | Required | Purpose |
+|----------|----------|---------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Yes | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Public anon key |
+| `NEXT_PUBLIC_API_URL` | Yes | Backend base URL **without** `/api/v1`, e.g. `https://<backend>.vercel.app` |
+
+3. Deploy, then open the frontend URL and verify login → New Test → Calculate flow
+4. Back in the backend project, confirm `CORS_ORIGINS` includes the exact frontend URL (scheme + domain, no trailing slash)
+
+### Alternative backends (Render / Railway)
+
+1. Create a new web service, connect the repo, set root directory to `backend/`
+2. Add the same backend environment variables as above
+3. Start command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+4. Verify `/api/health`
 
 ### Database & Auth (Supabase)
 

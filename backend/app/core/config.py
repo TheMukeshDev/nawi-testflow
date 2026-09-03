@@ -39,8 +39,26 @@ class Settings(BaseSettings):
     # Storage
     STORAGE_BUCKET: str = "nawi-attachments"
     
-    # CORS
-    CORS_ORIGINS: list[str] = ["http://localhost:3000"]
+    # CORS — comma-separated in env, e.g.
+    # CORS_ORIGINS="http://localhost:3000,https://nawi-testflow.vercel.app"
+    # The deployed frontend origin MUST be listed here or browsers block API calls.
+    CORS_ORIGINS: str = "http://localhost:3000"
+
+    @property
+    def cors_origins_list(self) -> list[str]:
+        """Parse CORS_ORIGINS env (comma-separated, or a JSON list)."""
+        raw = (self.CORS_ORIGINS or "").strip()
+        if not raw:
+            return []
+        if raw.startswith("["):
+            try:
+                import json
+                parsed = json.loads(raw)
+                if isinstance(parsed, list):
+                    return [str(o).strip() for o in parsed if str(o).strip()]
+            except Exception:
+                pass
+        return [o.strip() for o in raw.split(",") if o.strip()]
     
     # API
     API_V1_PREFIX: str = "/api/v1"
