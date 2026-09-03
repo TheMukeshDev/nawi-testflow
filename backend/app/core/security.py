@@ -190,25 +190,43 @@ async def get_current_user_profile(
     db: Optional[asyncpg.Pool] = Depends(get_db_pool),
 ) -> dict:
     """Get current user's profile with role information."""
+    # Roles are stored in the Supabase `profiles` table. When a direct DB pool
+    # is available (future integration) we read it directly; otherwise we look
+    # it up through the Supabase REST API using the service role key, which
+    # bypasses RLS so any caller can read its own profile.
     if db is None:
-        # Return basic user info if database not available
+        try:
+            supabase = get_supabase_client()
+            resp = (
+                supabase.table("profiles")
+                .select("id, auth_user_id, email, full_name, role, laboratory_id, is_active")
+                .eq("auth_user_id", current_user["id"])
+                .limit(1)
+                .execute()
+            )
+            rows = resp.data or []
+            if rows:
+                return rows[0]
+        except Exception:
+            pass
+        # No profile found / API unavailable: default to the lowest privilege.
         return {
             "id": current_user["id"],
             "email": current_user["email"],
-            "role": "viewer",  # Default to lowest privilege
+            "role": "viewer",
             "laboratory_id": None,
         }
-    
+
     query = """
         SELECT id, auth_user_id, email, full_name, role, laboratory_id, is_active
         FROM profiles
         WHERE auth_user_id = $1 AND is_active = true
     """
     row = await db.fetchrow(query, current_user["id"])
-    
+
     if not row:
         raise UnauthorizedError("User profile not found or inactive")
-    
+
     return dict(row)
 
 
