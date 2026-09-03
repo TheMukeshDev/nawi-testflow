@@ -160,7 +160,8 @@ async def get_current_user(
     # Fetch user from Supabase
     supabase = get_supabase_client()
     try:
-        user = supabase.auth.admin.get_user(user_id)
+        resp = supabase.auth.admin.get_user_by_id(user_id)
+        user = resp.user
         return {
             "id": user.id,
             "email": user.email,
