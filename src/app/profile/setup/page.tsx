@@ -13,7 +13,7 @@ import { useAuth } from '@/lib/auth-context';
 
 export default function ProfileSetupPage() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, getRoleRedirectPath } = useAuth();
   const [fullName, setFullName] = useState('');
   const [laboratory, setLaboratory] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -37,8 +37,8 @@ export default function ProfileSetupPage() {
         throw new Error('Failed to update profile');
       }
 
-      // Redirect to dashboard
-      router.push('/dashboard');
+      // Redirect to role-based dashboard
+      router.push(getRoleRedirectPath());
     } catch (err) {
       if (err instanceof Error) {
         setError(err.message);

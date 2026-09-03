@@ -116,8 +116,8 @@ function DetailRow({ label, value, mono = false }: {
   mono?: boolean;
 }) {
   return (
-    <div className="flex items-baseline gap-2 py-1.5">
-      <span className="text-[12px] text-gray-500 w-[160px] shrink-0">{label}</span>
+    <div className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-2 py-1.5">
+      <span className="text-[12px] text-gray-500 sm:w-[160px] shrink-0">{label}</span>
       <span className={`text-[13px] text-gray-900 ${mono ? 'font-mono text-[12px]' : ''}`}>
         {value !== null && value !== undefined && value !== ''
           ? value

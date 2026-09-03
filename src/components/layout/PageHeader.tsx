@@ -17,7 +17,7 @@ interface PageHeaderProps {
 export function PageHeader({ title, subtitle, actions, children }: PageHeaderProps) {
   return (
     <div className="mb-5">
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div className="min-w-0">
           <h1 className="text-page-title">{title}</h1>
           {subtitle && (

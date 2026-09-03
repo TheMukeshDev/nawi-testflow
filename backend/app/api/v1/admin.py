@@ -39,6 +39,9 @@ class SystemConfigResponse(BaseModel):
     total_users: int
     total_instruments: int
     total_reports: int
+    ai_enabled: bool = True
+    ai_configured: bool = False
+    ai_model: Optional[str] = None
 
 
 @router.get("/audit", response_model=List[AuditLogResponse])
@@ -62,13 +65,18 @@ async def get_system_config(
     current_user: dict = Depends(require_admin),
 ):
     """Get system configuration. Requires admin role."""
+    from engine.ai_settings import get_ai_settings
+    ai = get_ai_settings().public_status()
     return SystemConfigResponse(
         app_version="1.0.0",
         database_version="001",
         active_rules=3,
         total_users=0,
         total_instruments=0,
-        total_reports=0
+        total_reports=0,
+        ai_enabled=ai["ai_enabled"],
+        ai_configured=ai["ai_configured"],
+        ai_model=ai.get("model"),
     )
 
 

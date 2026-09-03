@@ -39,6 +39,14 @@ from datetime import datetime
 from enum import Enum
 from typing import Optional, Any
 
+try:
+    from google import genai
+except Exception:  # pragma: no cover - optional dependency guard
+    genai = None  # type: ignore
+
+from . import rule_explainer
+from .ai_settings import get_ai_settings
+
 
 # ============================================================================
 # ENUMERATIONS
@@ -96,6 +104,10 @@ class AIAssistanceResponse:
         "The authoritative source for all compliance decisions is the "
         "deterministic calculation engine (OIML R-76 rules)."
     )
+    # Where the content actually came from: "gemini" (live LLM call),
+    # "rule-template" (deterministic template, zero AI cost), or
+    # "rule-based" (pure rule_explainer output, zero AI cost).
+    source: str = "rule-template"
 
     def to_dict(self) -> dict:
         return {
@@ -108,6 +120,8 @@ class AIAssistanceResponse:
             "sources": self.sources,
             "warnings": self.warnings,
             "disclaimer": self.disclaimer,
+            "source": self.source,
+            "ai_used": self.source == "gemini",
         }
 
 
@@ -191,24 +205,123 @@ class AIAssistanceService:
         # Response includes disclaimer and is labeled as AI-generated
     """
 
-    def __init__(self, api_key: Optional[str] = None, model: Optional[str] = None):
+    def __init__(self, api_key: Optional[str] = None, model: Optional[str] = None,
+                 enabled: Optional[bool] = None):
         """
         Initialize AI assistance service.
 
         Args:
-            api_key: API key for AI service (optional)
-            model: Model identifier (optional)
+            api_key: Google Gemini API key (optional). If None, falls back to
+                the globally configured key (admin Settings / env).
+            model: Gemini model identifier (optional, defaults to settings).
+            enabled: Feature flag override. If None, uses global settings.
 
-        If api_key is None, all methods return graceful fallback responses.
+        USAGE POLICY (cost reduction):
+            Rule-based explanations (engine/rule_explainer.py) are ALWAYS
+            available and must be shown first. Gemini is called ONLY on
+            explicit user request AND only when a key is configured AND the
+            feature is enabled. If unavailable, all methods return graceful
+            deterministic fallbacks — the app never breaks without AI.
         """
-        self.api_key = api_key
-        self.model = model or "text-model"
-        self._available = api_key is not None
+        settings = get_ai_settings()
+        resolved_model = model or settings.model or "gemini-2.0-flash"
+        resolved_enabled = settings.enabled if enabled is None else bool(enabled)
+        resolved_key = api_key or settings.resolve_key()
+        self.api_key = resolved_key
+        self.model = resolved_model
+        self.enabled = resolved_enabled
+        self._available = bool(resolved_enabled and resolved_key)
+        self._http_timeout = 25.0
+        if resolved_key and genai is not None:
+            try:
+                self._client = genai.Client(api_key=resolved_key)
+            except Exception:
+                self._client = None
+                self._available = False
+        else:
+            self._client = None
+            if not resolved_key:
+                self._available = False
 
     @property
     def is_available(self) -> bool:
-        """Check if AI service is available."""
+        """Check if Gemini may be used (enabled AND an API key is configured)."""
+        # Re-check global settings so an admin toggle takes effect live.
+        try:
+            settings = get_ai_settings()
+            if not settings.enabled or not self.enabled:
+                return False
+        except Exception:
+            pass
         return self._available
+
+    def _should_skip_live_call(self) -> bool:
+        """Never hit the network for placeholder/test keys (keeps tests free)."""
+        if not self.api_key:
+            return True
+        key = self.api_key.strip().lower()
+        return key.startswith("test-") or key in ("test-key-123", "dummy", "changeme")
+
+    def _rule_grounding_block(self, decision_data: Optional[dict] = None,
+                              extra: Optional[str] = None) -> str:
+        """Render the AUTHORITATIVE rule context Gemini must stay grounded in."""
+        lines = [
+            "AUTHORITATIVE RULE CONTEXT (do NOT invent or change any of this):",
+        ]
+        if decision_data:
+            # Ground in the actual resolved rule + deterministic reason.
+            rule = rule_explainer.explain_decision(decision_data) if decision_data else None
+            if rule:
+                lines.append(f"- Test: {rule.get('test_name')} ({rule.get('test_code')})")
+                lines.append(f"- Verdict (final, immutable): {rule.get('decision')}")
+                lines.append(f"- Formula actually executed: {rule.get('formula')}")
+                lines.append(f"- Decision rule: {rule.get('decision_rule')}")
+                lines.append(
+                    f"- Observed: {rule.get('calculated_value')} {rule.get('calculated_unit')} | "
+                    f"Allowed: {rule.get('applicable_limit')} {rule.get('limit_unit')} | "
+                    f"Margin: {rule.get('margin')} | Excess: {rule.get('excess')}"
+                )
+                r = rule.get("rule", {})
+                lines.append(
+                    f"- Rule: {r.get('rule_id')} v{r.get('rule_version')} "
+                    f"({r.get('standard')} {r.get('standard_version')})"
+                )
+                lines.append(f"- Official reason: {rule.get('official_reason')}")
+        if extra:
+            lines.append(extra)
+        lines.append(
+            "STRICT RULES: Rephrase/explain ONLY the above. Never invent limits, "
+            "never change the verdict, never cite OIML clauses beyond what is given."
+        )
+        return "\n".join(lines)
+
+    def _call_gemini(self, system_prompt: str, user_prompt: str) -> Optional[str]:
+        """
+        Call Google Gemini via the official google.genai SDK.
+
+        Uses the Interactions API, which remains stable across model upgrades.
+        Returns the generated text, or None if the call fails for any reason
+        (no key, network error, model unavailable, empty response). Callers fall
+        back to templates when this returns None, so the app never breaks
+        without AI.
+        """
+        if not self.api_key or self._client is None:
+            return None
+        if self._should_skip_live_call():
+            return None
+        try:
+            prompt = user_prompt
+            if system_prompt:
+                prompt = f"{system_prompt}\n\n{user_prompt}"
+            interaction = self._client.interactions.create(
+                model=self.model,
+                input=prompt,
+            )
+            text = getattr(interaction, "output_text", None)
+            text = text.strip() if isinstance(text, str) else ""
+            return text if text else None
+        except Exception:
+            return None
 
     # ====================================================================
     # EXPLAIN RESULT
@@ -246,15 +359,40 @@ class AIAssistanceService:
         limit = decision_data.get("applicable_limit")
         explanations = decision_data.get("explanations", [])
 
-        # Build explanation
-        content = self._generate_explanation_text(
-            test_name=test_name,
-            decision=decision,
-            reason=reason,
-            calculated_value=calculated,
-            limit=limit,
-            explanations=explanations,
+        # Try live Gemini first (grounded in the ACTUAL rule); fall back to
+        # deterministic templates (zero AI cost).
+        grounding = self._rule_grounding_block(decision_data)
+        content = self._call_gemini(
+            system_prompt=(
+                "You are a metrology assistant helping explain an OIML R-76 "
+                "compliance decision. Be clear, factual and concise. The decision, "
+                "values and limits below are AUTHORITATIVE from the deterministic "
+                "engine — rephrase them in plain language but NEVER invent, round "
+                "away precision, change the verdict, or cite other clauses."
+                f"\n\n{grounding}"
+            ),
+            user_prompt=(
+                f"Explain the following compliance test result:\n"
+                f"- Test: {test_name}\n"
+                f"- Decision: {decision}\n"
+                f"- Reason: {reason}\n"
+                f"- Calculated value: {calculated}\n"
+                f"- Applicable limit: {limit}\n"
+                f"- Detailed explanations: {explanations}"
+            ),
         )
+        if content is None:
+            content = self._generate_explanation_text(
+                test_name=test_name,
+                decision=decision,
+                reason=reason,
+                calculated_value=calculated,
+                limit=limit,
+                explanations=explanations,
+            )
+            source = "rule-template"
+        else:
+            source = "gemini"
 
         return AIAssistanceResponse(
             assistance_type=AIAssistanceType.EXPLAIN_RESULT,
@@ -268,6 +406,7 @@ class AIAssistanceService:
                 "Calculation results",
                 f"Rule: {decision_data.get('rule_id', 'N/A')}",
             ],
+            source=source,
         )
 
     def _generate_explanation_text(
@@ -362,39 +501,71 @@ class AIAssistanceService:
         fail_count = sum(1 for r in test_results if r.get("decision") == "fail")
         total = len(test_results)
 
-        lines = [
-            f"## Report Summary: {report_number}",
-            "",
-            f"**Overall Result:** {overall_result.upper()}",
-            "",
-            "**Instrument:**",
-            f"- Manufacturer: {instrument.get('manufacturer', 'N/A')}",
-            f"- Model: {instrument.get('model', 'N/A')}",
-            f"- Serial: {instrument.get('serial_number', 'N/A')}",
-            "",
-            f"**Test Results:** {pass_count}/{total} passed",
-            "",
-        ]
+        # Try live Gemini first (grounded in actual report data); fall back to
+        # deterministic templating (zero AI cost).
+        grounding = self._rule_grounding_block(
+            None,
+            extra=(
+                f"Report {report_number}: overall={overall_result}, "
+                f"passed {pass_count}/{total}. Instrument={instrument}. "
+                f"Per-test: {test_results}. Only summarize what is listed."
+            ),
+        )
+        content = self._call_gemini(
+            system_prompt=(
+                "You are a metrology assistant summarizing an OIML R-76 test "
+                "report. Be concise, factual and clear. Do not invent data; "
+                "only summarize what is provided. Never change any verdict."
+                f"\n\n{grounding}"
+            ),
+            user_prompt=(
+                f"Summarize this test report:\n"
+                f"- Report number: {report_number}\n"
+                f"- Overall result: {overall_result}\n"
+                f"- Instrument: {instrument}\n"
+                f"- Tests passed: {pass_count}/{total}\n"
+                f"- Test results: {test_results}"
+            ),
+        )
+        if content is None:
+            lines = [
+                f"## Report Summary: {report_number}",
+                "",
+                f"**Overall Result:** {overall_result.upper()}",
+                "",
+                "**Instrument:**",
+                f"- Manufacturer: {instrument.get('manufacturer', 'N/A')}",
+                f"- Model: {instrument.get('model', 'N/A')}",
+                f"- Serial: {instrument.get('serial_number', 'N/A')}",
+                "",
+                f"**Test Results:** {pass_count}/{total} passed",
+                "",
+            ]
 
-        if test_results:
-            lines.append("**Individual test outcomes:**")
-            for result in test_results:
-                name = result.get("test_name", "Unknown")
-                status = result.get("decision", "unknown")
-                marker = "✓" if status == "pass" else "✗" if status == "fail" else "—"
-                lines.append(f"- {marker} {name}: {status.upper()}")
-            lines.append("")
+            if test_results:
+                lines.append("**Individual test outcomes:**")
+                for result in test_results:
+                    name = result.get("test_name", "Unknown")
+                    status = result.get("decision", "unknown")
+                    marker = "✓" if status == "pass" else "✗" if status == "fail" else "—"
+                    lines.append(f"- {marker} {name}: {status.upper()}")
+                lines.append("")
 
-        lines.extend([
-            "---",
-            "*This summary was generated by AI assistance for quick reference. "
-            "Please refer to the full official report for complete details.*",
-        ])
+            lines.extend([
+                "---",
+                "*This summary was generated by AI assistance for quick reference. "
+                "Please refer to the full official report for complete details.*",
+            ])
+
+            content = "\n".join(lines)
+            source = "rule-template"
+        else:
+            source = "gemini"
 
         return AIAssistanceResponse(
             assistance_type=AIAssistanceType.SUMMARIZE_REPORT,
             title=f"Summary: {report_number}",
-            content="\n".join(lines),
+            content=content,
             summary=f"Report {report_number}: {overall_result.upper()} — "
                     f"{pass_count}/{total} tests passed.",
             confidence=AIConfidenceLevel.HIGH,
@@ -402,6 +573,7 @@ class AIAssistanceService:
                 "Official test report data",
                 "Compliance engine results",
             ],
+            source=source,
         )
 
     # ====================================================================
@@ -439,28 +611,53 @@ class AIAssistanceService:
         severity = warning_data.get("severity", "warning")
         value = warning_data.get("value")
 
-        lines = [
-            f"## Validation Warning: {field_name}",
-            "",
-            f"**Code:** {code}",
-            f"**Severity:** {severity.upper()}",
-            "",
-            f"**What this means:**",
-            self._interpret_warning(code, field_name, value),
-            "",
-            "**Suggested action:**",
-            self._suggest_action(code, field_name),
-            "",
-            "---",
-            "*This explanation was generated by AI assistance. The validation "
-            "warning itself was raised by the deterministic data validation "
-            "engine. AI assistance does not modify validation rules.*",
-        ]
+        # Try live Gemini first (grounded in the actual warning); fall back to
+        # deterministic templating (zero AI cost).
+        content = self._call_gemini(
+            system_prompt=(
+                "You are a metrology assistant explaining data validation "
+                "warnings. Be helpful, factual and concise. Explain ONLY the "
+                "warning given below in plain language with a suggested action. "
+                "Do not invent validation rules or cite other clauses."
+            ),
+            user_prompt=(
+                f"Explain this validation warning:\n"
+                f"- Field: {field_name}\n"
+                f"- Code: {code}\n"
+                f"- Severity: {severity}\n"
+                f"- Value: {value}\n"
+                f"- Message: {message}\n"
+                "Include what it means and a suggested action."
+            ),
+        )
+
+        if content is None:
+            lines = [
+                f"## Validation Warning: {field_name}",
+                "",
+                f"**Code:** {code}",
+                f"**Severity:** {severity.upper()}",
+                "",
+                "**What this means:**",
+                self._interpret_warning(code, field_name, value),
+                "",
+                "**Suggested action:**",
+                self._suggest_action(code, field_name),
+                "",
+                "---",
+                "*This explanation was generated by AI assistance. The validation "
+                "warning itself was raised by the deterministic data validation "
+                "engine. AI assistance does not modify validation rules.*",
+            ]
+            content = "\n".join(lines)
+            source = "rule-template"
+        else:
+            source = "gemini"
 
         return AIAssistanceResponse(
             assistance_type=AIAssistanceType.EXPLAIN_VALIDATION,
             title=f"Warning Explanation: {field_name}",
-            content="\n".join(lines),
+            content=content,
             summary=f"Validation warning on '{field_name}': {message}",
             confidence=AIConfidenceLevel.MEDIUM,
             sources=[
@@ -468,6 +665,7 @@ class AIAssistanceService:
                 f"Field: {field_name}",
                 f"Code: {code}",
             ],
+            source=source,
         )
 
     def _interpret_warning(self, code: str, field_name: str, value: Any) -> str:
@@ -637,45 +835,76 @@ class AIAssistanceService:
         calculations = test_data.get("calculations", {})
         result = test_data.get("result", "unknown")
 
-        lines = [
-            f"## Test Summary: {test_name}",
-            "",
-            "**Procedure:**",
-            f"The {test_name.lower()} test was conducted in accordance "
-            f"with OIML R-76 requirements.",
-            "",
-        ]
+        # Try live Gemini first (grounded in actual observations); fall back to
+        # deterministic templating (zero AI cost).
+        grounding = self._rule_grounding_block(
+            None,
+            extra=(
+                f"Test={test_name}, result={result}, observations={observations}, "
+                f"calculations={calculations}. Mention only these values."
+            ),
+        )
+        content = self._call_gemini(
+            system_prompt=(
+                "You are a metrology assistant writing a human-readable test "
+                "summary for an OIML R-76 report. Be factual and concise. "
+                "Rephrase ONLY the observations/calculations given. Do not invent "
+                "values, limits or verdicts."
+                f"\n\n{grounding}"
+            ),
+            user_prompt=(
+                f"Write a test summary:\n"
+                f"- Test name: {test_name}\n"
+                f"- Result: {result}\n"
+                f"- Observations: {observations}\n"
+                f"- Calculations: {calculations}"
+            ),
+        )
 
-        if observations:
-            lines.append("**Observations:**")
-            lines.append(f"- Number of test points: {len(observations)}")
+        if content is None:
+            lines = [
+                f"## Test Summary: {test_name}",
+                "",
+                "**Procedure:**",
+                f"The {test_name.lower()} test was conducted in accordance "
+                f"with OIML R-76 requirements.",
+                "",
+            ]
+
             if observations:
-                first = observations[0] if isinstance(observations[0], dict) else {}
-                if first.get("unit"):
-                    lines.append(f"- Unit of measurement: {first['unit']}")
-            lines.append("")
+                lines.append("**Observations:**")
+                lines.append(f"- Number of test points: {len(observations)}")
+                if observations:
+                    first = observations[0] if isinstance(observations[0], dict) else {}
+                    if first.get("unit"):
+                        lines.append(f"- Unit of measurement: {first['unit']}")
+                lines.append("")
 
-        if calculations:
-            lines.append("**Calculated Results:**")
-            for key, value in calculations.items():
-                if isinstance(value, (int, float)):
-                    lines.append(f"- {key}: {value:.4f}")
-            lines.append("")
+            if calculations:
+                lines.append("**Calculated Results:**")
+                for key, value in calculations.items():
+                    if isinstance(value, (int, float)):
+                        lines.append(f"- {key}: {value:.4f}")
+                lines.append("")
 
-        lines.extend([
-            f"**Result:** {result.upper()}",
-            "",
-            "---",
-            "*This summary was generated by AI assistance. The official "
-            "test record and calculation results are the authoritative "
-            "source. This summary may be included in report remarks at "
-            "the discretion of the reviewing officer.*",
-        ])
+            lines.extend([
+                f"**Result:** {result.upper()}",
+                "",
+                "---",
+                "*This summary was generated by AI assistance. The official "
+                "test record and calculation results are the authoritative "
+                "source. This summary may be included in report remarks at "
+                "the discretion of the reviewing officer.*",
+            ])
+            content = "\n".join(lines)
+            source = "rule-template"
+        else:
+            source = "gemini"
 
         return AIAssistanceResponse(
             assistance_type=AIAssistanceType.GENERATE_SUMMARY,
             title=f"Test Summary: {test_name}",
-            content="\n".join(lines),
+            content=content,
             summary=f"{test_name} test completed. Result: {result.upper()}.",
             confidence=AIConfidenceLevel.MEDIUM,
             sources=[
@@ -683,6 +912,7 @@ class AIAssistanceService:
                 "Calculation engine results",
                 "OIML R-76 test procedures",
             ],
+            source=source,
         )
 
     # ====================================================================
@@ -694,22 +924,28 @@ class AIAssistanceService:
         assistance_type: AIAssistanceType,
         message: str,
     ) -> AIAssistanceResponse:
-        """Return a graceful fallback when AI is unavailable."""
+        """Return a graceful fallback when Gemini is unavailable/gated."""
         return AIAssistanceResponse(
             assistance_type=assistance_type,
             title="AI Assistance Unavailable",
-            content=message,
+            content=(
+                message + " Tip: rule-based explanations below need no API key. "
+                "To enable 'Enhance with AI', add a Gemini API key in Settings "
+                "(user Settings, or admin System Settings for all users)."
+            ),
             summary="AI assistance is not configured or unavailable.",
             confidence=AIConfidenceLevel.LOW,
             warnings=[
                 "AI service is not available",
                 "The application functions fully without AI assistance",
+                "Rule-based explanations remain available at zero AI cost",
             ],
             disclaimer=(
                 "DISCLAIMER: AI assistance is not available. The application "
                 "continues to function normally. All compliance determinations "
                 "are made by the deterministic calculation engine."
             ),
+            source="rule-based",
         )
 
 
@@ -724,12 +960,20 @@ def get_ai_service(api_key: Optional[str] = None) -> AIAssistanceService:
     """
     Get the AI assistance service singleton.
 
-    If no api_key is provided, the service is created but marked as unavailable.
-    The application continues to function normally without AI.
+    Resolution order for the key: explicit api_key arg (personal user key
+    from Settings) -> admin-configured global key -> GEMINI_API_KEY env.
+    The global enabled flag from Settings is always respected. If no key is
+    available or the feature is disabled, the service reports unavailable and
+    callers fall back to deterministic rule-based explanations.
     """
     global _service
     if _service is None:
-        _service = AIAssistanceService(api_key=api_key)
+        import os
+        settings = get_ai_settings()
+        key = api_key or settings.resolve_key() or os.environ.get("GEMINI_API_KEY")
+        model = settings.model or os.environ.get("GEMINI_MODEL")
+        _service = AIAssistanceService(api_key=key, model=model,
+                                       enabled=settings.enabled)
     return _service
 
 

@@ -8,6 +8,7 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { RouteGuard } from '@/components/auth/RouteGuard';
 
@@ -33,15 +34,15 @@ export default function AdminDashboard() {
             Quick Actions
           </h2>
           <div className="flex gap-2">
-            <a href="/admin/users" className="px-3 py-1.5 border border-gray-300 rounded text-[12px] font-medium text-gray-700 hover:bg-gray-50">
+            <Link href="/admin/users" className="px-3 py-1.5 border border-gray-300 rounded text-[12px] font-medium text-gray-700 hover:bg-gray-50">
               Manage Users
-            </a>
-            <a href="/laboratories" className="px-3 py-1.5 border border-gray-300 rounded text-[12px] font-medium text-gray-700 hover:bg-gray-50">
+            </Link>
+            <Link href="/laboratories" className="px-3 py-1.5 border border-gray-300 rounded text-[12px] font-medium text-gray-700 hover:bg-gray-50">
               Laboratories
-            </a>
-            <a href="/admin/settings" className="px-3 py-1.5 border border-gray-300 rounded text-[12px] font-medium text-gray-700 hover:bg-gray-50">
+            </Link>
+            <Link href="/admin/settings" className="px-3 py-1.5 border border-gray-300 rounded text-[12px] font-medium text-gray-700 hover:bg-gray-50">
               Settings
-            </a>
+            </Link>
           </div>
         </div>
 

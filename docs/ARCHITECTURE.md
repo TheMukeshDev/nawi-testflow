@@ -308,6 +308,33 @@ See `backend/migrations/` for complete SQL definitions.
 | PUT | `/api/v1/users/{id}` | Update user |
 | GET | `/api/v1/audit` | Get audit log |
 
+### 4.8 AI Assistance (Two-Tier: Rule-First, Gemini On-Demand)
+
+Tier 1 needs no key and makes no AI calls. Tier 2 fires one Gemini call
+per explicit user click, only when a key is configured in Settings.
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/v1/ai/explain-rule` | Rule-based verdict explanation (no AI) |
+| POST | `/api/v1/ai/summarize-rule` | Rule-based report summary (no AI) |
+| GET | `/api/v1/ai/process/{test_code}` | Rule-based test walkthrough (no AI) |
+| POST | `/api/v1/ai/explain-result` | Explain result (`mode=rule` default, `mode=ai` for Gemini) |
+| POST | `/api/v1/ai/summarize-report` | Summarize report (rule-first, optional AI) |
+| POST | `/api/v1/ai/explain-validation` | Explain validation warning (rule-first, optional AI) |
+| POST | `/api/v1/ai/generate-summary` | Test summary (rule-first, optional AI) |
+| POST | `/api/v1/ai/extract-metadata` | Document extraction (key required) |
+| GET | `/api/v1/ai/settings` | AI status, key masked (any authenticated user) |
+| PUT | `/api/v1/ai/settings` | Global key / enabled / model (admin only) |
+| DELETE | `/api/v1/ai/settings/key` | Clear global key (admin only) |
+| GET | `/api/v1/ai/status` | Rule-based + Gemini availability |
+
+Key modules: `backend/engine/rule_explainer.py` (Tier 1, deterministic),
+`backend/engine/ai_settings.py` (gating: global key, enabled flag, model
+allow-list), `backend/engine/ai_assistance.py` (Tier 2, prompts grounded in
+the actual resolved rule — never invents limits or verdicts).
+Personal keys are supplied per-request via the `X-Gemini-Key` header (user
+Settings page, browser-local) and take precedence over the admin global key.
+
 ---
 
 ## 5. Calculation Engine

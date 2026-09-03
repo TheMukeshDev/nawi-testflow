@@ -61,6 +61,8 @@ Repository
 - **Equipment Management** — Track calibration weights and test equipment with expiry warnings
 - **Laboratory Management** — Record laboratory information and accreditation details
 - **Attachments** — Upload photographs, calibration certificates, and supporting documents
+- **Smart Form Defaults** — Date fields prefill with today (validity/next-calibration default to +1 year) in local format; every value stays editable via native pickers
+- **User Management** — Admins can add/edit users, assign roles and laboratories, activate/deactivate accounts
 
 ## User Roles
 
@@ -154,8 +156,9 @@ The documentation includes searchable content, sidebar navigation, and is respon
 
 - **Calculation Engine** — Deterministic numeric calculations with unit awareness
 - **Compliance Engine** — Versioned rule evaluation with PASS/FAIL determination
-- **Report Engine** — PDF generation (ReportLab) and DOCX generation (python-docx)
-- **AI Assistance** — Optional LLM-based explanations (never determines compliance)
+- **Report Engine** — PDF generation (ReportLab) and DOCX generation (python-docx), served from live Supabase data
+- **Explanation Engine** — Deterministic rule-based explainer (actual formula, observed vs allowed, margin/excess, why pass/fail) shown first at zero AI cost
+- **AI Assistance** — Optional on-demand Gemini rephrasing, grounded in the actual resolved rule (enabled only with an API key from Settings)
 
 ## Project Structure
 
@@ -184,18 +187,28 @@ nawi-testflow/
 │   └── lib/                      # Utilities and configuration
 │       ├── auth.ts               # Role/permission definitions
 │       ├── auth-context.tsx      # Auth context provider
+│       ├── ai.ts                 # Rule-first explanation client + personal key
+│       ├── dates.ts              # Shared date defaults (today / +1 year)
 │       └── supabase/             # Supabase client
+│   ├── components/
+│   │   └── ai/                   # AiAssistBox (rule-first, on-demand AI)
+│   ├── app/
+│   │   └── settings/             # Personal Settings (own Gemini key)
 │
 ├── backend/                      # FastAPI backend
 │   ├── app/
 │   │   ├── main.py               # Application entry point
-│   │   ├── api/                  # API routes
+│   │   ├── api/                  # API routes (incl. /ai two-tier routes)
 │   │   ├── core/                 # Configuration and exceptions
 │   │   └── services/             # Business logic services
 │   ├── engine/                   # Calculation and compliance engines
+│   │   ├── rule_explainer.py     # Deterministic explanations (no AI)
+│   │   └── ai_settings.py        # Gemini gating (global key / flag / model)
+│   ├── api/                      # Serverless entry (Vercel)
 │   ├── demo/                     # Demonstration data and scripts
-│   ├── tests/                    # Backend test suite (504+ tests)
-│   └── requirements.txt          # Python dependencies
+│   ├── tests/                    # Backend test suite (521 tests)
+│   ├── requirements.txt          # Python dependencies
+│   └── pyproject.toml / uv.lock  # Pinned Python environment
 │
 ├── supabase/
 │   └── migrations/               # Database schema migrations
@@ -278,7 +291,9 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 SUPABASE_URL=your-supabase-url
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 DATABASE_URL=postgresql://...
-GEMINI_API_KEY=your-gemini-key  # Optional, for AI assistance
+GEMINI_API_KEY=your-gemini-key  # Optional, enables on-demand "Enhance with AI" (also configurable from Settings UI)
+GEMINI_MODEL=gemini-2.0-flash    # Optional, one of: gemini-2.0-flash, gemini-2.5-flash, gemini-3.8-flash
+AI_ASSISTANCE_ENABLED=true       # Optional, admin can toggle from System Settings
 ```
 
 > **Important:** Never expose `SUPABASE_SERVICE_ROLE_KEY`, `GEMINI_API_KEY`, or `DATABASE_URL` to the browser.
@@ -398,7 +413,7 @@ For SIH mentor demonstrations:
 
 ### Backend Test Suite
 
-504+ tests covering:
+521 tests covering:
 
 | Category | Tests | Description |
 |----------|-------|-------------|
@@ -412,7 +427,8 @@ For SIH mentor demonstrations:
 | Report Engine | 24 | PDF/DOCX generation |
 | Repository | 39 | Report search and history |
 | Attachments | 41 | File management |
-| AI Assistance | 44 | AI layer with safety guards |
+| AI Assistance | 44 | AI layer with safety guards, rule-grounded prompts |
+| Rule Explainer + AI Gating | 9 | Deterministic explanations, key-gated Gemini |
 | Security & Audit | 53 | Authorization and audit trail |
 | Adversarial | 66 | Edge cases and error handling |
 | Golden Dataset | 42 | Known inputs → expected outputs |
@@ -457,14 +473,28 @@ Result
 
 The MVP includes demonstration rules for presentation purposes. These rules are clearly marked and must not be used for actual regulatory compliance decisions.
 
-## AI Architecture
+## AI Architecture — Two Tiers (Rule-First, Gemini On-Demand)
 
-AI assistance is optional and provides:
+To keep AI usage (and cost) minimal, explanations work in two tiers:
 
-- Explaining calculation results in plain language
-- Summarizing test reports
-- Extracting instrument metadata from uploaded documents
-- Generating human-readable test summaries
+**Tier 1 — Rule-based (default, always available, zero AI cost):**
+
+- Every result shows the actual formula executed, observed vs allowed values, margin/excess, and *why* it passed/failed
+- Process walkthroughs ("how this test works") and report summaries are computed deterministically from compliance data
+- Needs no API key and makes no network calls (`backend/engine/rule_explainer.py`)
+
+**Tier 2 — Gemini enhancement (explicit click only):**
+
+- The "Enhance with AI" button sends the *already-resolved rule* (rule ID + version, formula, observed/allowed values, immutable verdict) to Gemini for a plain-language rephrasing only
+- Gemini is called **only** when the user clicks, **only** when a key is configured, and **only** when the feature is enabled
+- Without a key, the UI shows the complete rule-based result plus a pointer to Settings instead of calling AI
+
+**Enabling Gemini (key gating):**
+
+- Any user can add a *personal* key at **Settings** (`/settings`) — stored only in their browser, sent per-request
+- An admin can configure a *global* key, toggle the feature, and change the model at **System Settings** (`/admin/settings`), which applies to everyone
+- Backend: `GET /ai/settings` (status, key masked) · `PUT /ai/settings` + `DELETE /ai/settings/key` (admin only)
+- Rule-based endpoints needing no key: `POST /ai/explain-rule`, `POST /ai/summarize-rule`, `GET /ai/process/{test_code}`
 
 **AI must never:**
 

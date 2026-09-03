@@ -8,10 +8,13 @@
 
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import Link from 'next/link';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { useAuth } from '@/lib/auth-context';
+import { AiAssistBox } from '@/components/ai/AiAssistBox';
+import { localExplain } from '@/lib/ai';
+import { todayISO } from '@/lib/dates';
 
 // ═══════════════════════════════════════════════════════════════
 // TYPES
@@ -66,7 +69,7 @@ const INITIAL_INSTRUMENT: InstrumentData = {
 
 const INITIAL_CONDITIONS: ConditionData = {
   temperature: '', humidity: '', airPressure: '',
-  testLocation: '', testDate: new Date().toISOString().split('T')[0],
+  testLocation: '', testDate: todayISO(),
   laboratoryName: '', notes: '',
 };
 
@@ -200,6 +203,36 @@ export default function NewTestPage() {
   const [calcResult, setCalcResult] = useState<{ test: string; mean: string; stddev: string; result: string }[] | null>(null);
   const calculatedRef = useRef<number>(-1);
 
+  // Rule-based explanations (Tier 1 — no AI, computed from the actual
+  // calculation values + demo rule reference). Gemini is only used when the
+  // user clicks "Enhance with AI" inside AiAssistBox.
+  const explanations = useMemo(() => {
+    if (!calcResult) return [];
+    return calcResult.map((r) => {
+      const codeMatch = r.test.match(/\((\w+)\)/);
+      const code = codeMatch ? codeMatch[1] : 'RPT';
+      const decisionData: Record<string, unknown> = {
+        test_code: code,
+        test_name: r.test.replace(/\s*\(\w+\)\s*$/, ''),
+        decision: r.result.toLowerCase(),
+        reason:
+          r.result === 'PASS'
+            ? `Demo evaluation: std-dev ${r.stddev} within demo limit (mean ${r.mean}). Official evaluation uses the backend engine with versioned OIML R-76 rules.`
+            : `Demo evaluation: value exceeds demo limit (mean ${r.mean}, std-dev ${r.stddev}). See backend compliance engine for the authoritative verdict.`,
+        calculated_value: Number(r.stddev),
+        calculated_unit: 'g',
+        applicable_limit: 0.5,
+        limit_unit: 'g',
+        rule_id: `DEMO-${code}-001`,
+        rule_version: 'demo',
+        standard: 'OIML R-76',
+        standard_version: 'demo',
+        explanations: [],
+      };
+      return { decisionData, explanation: localExplain(decisionData) };
+    });
+  }, [calcResult]);
+
   // Auto-calculate when reaching step 4 (Calculate)
   useEffect(() => {
     if (step === 4 && calculatedRef.current !== completed.length) {
@@ -296,7 +329,7 @@ export default function NewTestPage() {
           <h1 className="text-[18px] font-semibold text-gray-900">New Test Report</h1>
           <p className="text-[12px] text-gray-500 mt-0.5">Create a new test record following OIML R-76 procedures</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={fillSample}
             className="px-3 py-1.5 bg-blue-50 text-[#1e3a5f] text-[12px] font-medium rounded-sm border border-blue-200 hover:bg-blue-100 transition-colors"
@@ -547,6 +580,16 @@ export default function NewTestPage() {
                 <strong>Note:</strong> These are demo calculations for demonstration purposes. Actual compliance evaluation uses the backend calculation engine with versioned OIML R-76 rules.
               </p>
             </div>
+            {/* Rule-first explanations: why each result passed/failed (no AI).
+                "Enhance with AI" inside each box is the ONLY Gemini call site. */}
+            {calcResult && calcResult.length > 0 && (
+              <div className="mt-4 space-y-3">
+                <h3 className="text-[13px] font-semibold text-gray-900">Result explanations <span className="font-normal text-gray-400">— rule-based first, AI optional</span></h3>
+                {explanations.map((e, i) => (
+                  <AiAssistBox key={i} decisionData={e.decisionData} ruleExplanation={e.explanation as never} compact />
+                ))}
+              </div>
+            )}
           </div>
         )}
 

@@ -15,6 +15,7 @@
 
 import React from 'react';
 import { cn } from '@/lib/utils';
+import { todayISO, nowTimeHM } from '@/lib/dates';
 import { Input, Select, Textarea, FieldSet } from '@/components/ui/FormControls';
 import { ConditionDot } from '@/components/ui/StatusBadge';
 import type { ConditionStatus } from '@/types';
@@ -135,8 +136,8 @@ export function getInitialTestConditions(laboratoryId?: string): TestConditionsF
     testLocation: '',
     testLocationDetail: '',
     laboratoryId: laboratoryId || '',
-    testDate: now.toISOString().split('T')[0],
-    testStartTime: '',
+    testDate: todayISO(now),
+    testStartTime: nowTimeHM(now),
     testEndTime: '',
     notes: '',
   };
@@ -182,7 +183,7 @@ export function TestConditionsForm({
     <div className="space-y-4">
       {/* ── Environmental Conditions ── */}
       <FieldSet legend="Environmental Conditions" description="Record conditions at time of testing">
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {/* Temperature */}
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
@@ -278,7 +279,7 @@ export function TestConditionsForm({
 
       {/* ── Test Location ── */}
       <FieldSet legend="Test Location">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Select
             label="Test Location"
             value={data.testLocation}
@@ -305,7 +306,7 @@ export function TestConditionsForm({
 
       {/* ── Laboratory & Date/Time ── */}
       <FieldSet legend="Laboratory & Schedule">
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <Select
             label="Laboratory"
             value={data.laboratoryId}
@@ -324,7 +325,7 @@ export function TestConditionsForm({
             required
            
           />
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <Input
               label="Start Time"
               type="time"

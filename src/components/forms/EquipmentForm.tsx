@@ -13,6 +13,7 @@
 
 import React from 'react';
 import { cn } from '@/lib/utils';
+import { todayISO, plusYearsISO } from '@/lib/dates';
 import { Input, Select, Textarea, FieldSet } from '@/components/ui/FormControls';
 import { Button } from '@/components/ui/Button';
 import { Alert } from '@/components/ui/Alert';
@@ -137,8 +138,8 @@ export function getInitialEquipment(laboratoryId?: string): EquipmentFormData {
     manufacturer: '',
     model: '',
     serialNumber: '',
-    calibrationDate: '',
-    calibrationValidUntil: '',
+    calibrationDate: todayISO(),
+    calibrationValidUntil: plusYearsISO(1),
     calibrationCertificateRef: '',
     laboratoryId: laboratoryId || '',
     condition: 'good',
@@ -194,7 +195,7 @@ export function EquipmentForm({
 
       {/* ── Equipment Identification ── */}
       <FieldSet legend="Equipment Identification">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input
             label="Equipment ID"
             value={data.equipmentId}
@@ -252,7 +253,7 @@ export function EquipmentForm({
 
       {/* ── Calibration Information ── */}
       <FieldSet legend="Calibration Information">
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <Input
             label="Calibration Date"
             type="date"
@@ -291,7 +292,7 @@ export function EquipmentForm({
 
       {/* ── Laboratory & Condition ── */}
       <FieldSet legend="Laboratory & Condition">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Select
             label="Laboratory"
             value={data.laboratoryId}

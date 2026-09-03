@@ -391,7 +391,7 @@ interface FilterTabsProps {
 
 export function FilterTabs({ tabs, active, onChange }: FilterTabsProps) {
   return (
-    <div className="flex items-center gap-0 border border-gray-200 rounded-md bg-white overflow-hidden">
+    <div className="flex items-center gap-0 border border-gray-200 rounded-md bg-white overflow-x-auto">
       {tabs.map(tab => (
         <button
           key={tab.value}

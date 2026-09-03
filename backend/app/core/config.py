@@ -25,6 +25,11 @@ class Settings(BaseSettings):
     SUPABASE_URL: str = ""
     SUPABASE_SERVICE_KEY: str = ""
     SUPABASE_ANON_KEY: str = ""
+
+    # Gemini (AI assistance — on-demand only, gated by Settings key)
+    GEMINI_API_KEY: str = ""
+    GEMINI_MODEL: str = "gemini-2.0-flash"
+    AI_ASSISTANCE_ENABLED: bool = True
     
     # JWT
     JWT_SECRET: str = "change-me-in-production"

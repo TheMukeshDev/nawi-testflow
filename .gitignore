@@ -73,4 +73,8 @@ supabase/.branches/
 *.whl
 *.tar.gz
 
+# Vercel
 .vercel
+
+# uv
+.uv/

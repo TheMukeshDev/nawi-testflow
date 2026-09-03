@@ -9,6 +9,7 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import { Shell } from '@/components/layout/Shell';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { DataTable, FilterTabs, type ColumnDef } from '@/components/ui/DataTable';
@@ -191,14 +192,16 @@ export default function TestsPage() {
         title="Tests"
         subtitle="Manage NAWI test records per OIML R-76"
         actions={
-          <Button variant="primary" size="md">
-            New Test Report
-          </Button>
+          <Link href="/tests/new">
+            <Button variant="primary" size="md">
+              New Test Report
+            </Button>
+          </Link>
         }
       />
 
       {/* ── Filter Tabs ── */}
-      <div className="flex items-center justify-between mb-3">
+      <div className="mb-3 overflow-x-auto">
         <FilterTabs
           tabs={TEST_STATUS_FILTERS.map(f => ({
             ...f,

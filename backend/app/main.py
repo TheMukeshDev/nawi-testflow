@@ -68,7 +68,7 @@ async def health_check():
 
 
 # Import and register routes
-from .api.v1 import auth, tests, instruments, laboratories, equipment, reports, users, admin
+from .api.v1 import auth, tests, instruments, laboratories, equipment, reports, users, admin, ai_assistance
 
 app.include_router(auth.router, prefix=settings.API_V1_PREFIX)
 app.include_router(tests.router, prefix=settings.API_V1_PREFIX)
@@ -78,6 +78,7 @@ app.include_router(equipment.router, prefix=settings.API_V1_PREFIX)
 app.include_router(reports.router, prefix=settings.API_V1_PREFIX)
 app.include_router(users.router, prefix=settings.API_V1_PREFIX)
 app.include_router(admin.router, prefix=settings.API_V1_PREFIX)
+app.include_router(ai_assistance.router, prefix=settings.API_V1_PREFIX)
 
 
 if __name__ == "__main__":

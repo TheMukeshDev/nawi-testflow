@@ -14,6 +14,7 @@
 
 import React from 'react';
 import { cn } from '@/lib/utils';
+import { todayISO, plusYearsISO } from '@/lib/dates';
 import { Input, Select, Textarea, FieldSet } from '@/components/ui/FormControls';
 import { Button } from '@/components/ui/Button';
 import type { Manufacturer, InstrumentModel, MassUnit, InstrumentClass } from '@/types';
@@ -185,9 +186,9 @@ export function getInitialInstrumentData(laboratoryId?: string): InstrumentFormD
     firmwareVersion: '',
     powerSupply: '',
     laboratoryId: laboratoryId || '',
-    dateReceived: new Date().toISOString().split('T')[0],
-    lastCalibration: '',
-    nextCalibration: '',
+    dateReceived: todayISO(),
+    lastCalibration: todayISO(),
+    nextCalibration: plusYearsISO(1),
     condition: 'good',
     notes: '',
   };
@@ -265,7 +266,7 @@ export function InstrumentForm({
     <form onSubmit={(e) => { e.preventDefault(); onSubmit(); }} className="space-y-6">
       {/* ── Manufacturer & Model ── */}
       <FieldSet legend="Manufacturer & Model">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Select
             label="Manufacturer"
             value={data.manufacturerId}
@@ -308,7 +309,7 @@ export function InstrumentForm({
 
       {/* ── Identification ── */}
       <FieldSet legend="Instrument Identification">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input
             label="Serial Number"
             value={data.serialNumber}
@@ -338,7 +339,7 @@ export function InstrumentForm({
 
       {/* ── Technical Specifications ── */}
       <FieldSet legend="Technical Specifications">
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <Select
             label="Instrument Class"
             value={data.instrumentClass || ''}
@@ -375,7 +376,7 @@ export function InstrumentForm({
 
       {/* ── Capacity & Scale ── */}
       <FieldSet legend="Capacity & Scale Intervals">
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <div className="flex gap-2">
             <div className="flex-1">
               <Input
@@ -458,7 +459,7 @@ export function InstrumentForm({
             </div>
           </div>
         </div>
-        <div className="grid grid-cols-3 gap-4 mt-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
           <div className="flex gap-2">
             <div className="flex-1">
               <Input
@@ -499,7 +500,7 @@ export function InstrumentForm({
 
       {/* ── Software & Firmware ── */}
       <FieldSet legend="Software & Firmware">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input
             label="Software Version"
             value={data.softwareVersion || ''}
@@ -517,7 +518,7 @@ export function InstrumentForm({
 
       {/* ── Laboratory & Condition ── */}
       <FieldSet legend="Laboratory & Condition">
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <Select
             label="Laboratory"
             value={data.laboratoryId}
@@ -552,7 +553,7 @@ export function InstrumentForm({
 
       {/* ── Calibration ── */}
       <FieldSet legend="Calibration" description="Optional calibration tracking">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input
             label="Last Calibration Date"
             type="date"

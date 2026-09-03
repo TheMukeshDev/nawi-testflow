@@ -210,7 +210,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: 'Equipment', href: '/equipment', requiredRoles: ['admin', 'tester', 'reviewer', 'viewer'] },
   { label: 'Repository', href: '/repository', requiredRoles: ['admin', 'tester', 'reviewer', 'viewer'] },
   { label: 'Users', href: '/admin', requiredRoles: ['admin'] },
-  { label: 'Settings', href: '/settings', requiredRoles: ['admin'] },
+  { label: 'Settings', href: '/settings', requiredRoles: ['admin', 'tester', 'reviewer', 'viewer'] },
 ];
 
 /**

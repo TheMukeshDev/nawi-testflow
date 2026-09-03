@@ -1,0 +1,36 @@
+[project]
+name = "nawi-testflow-backend"
+version = "1.0.0"
+description = "OIML R-76 NAWI Test Report Generation System"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "fastapi==0.115.0",
+    "uvicorn[standard]==0.30.0",
+    "python-multipart==0.0.9",
+    "sqlalchemy==2.0.35",
+    "asyncpg==0.29.0",
+    "alembic==1.13.0",
+    "supabase==2.31.0",
+    "python-jose[cryptography]==3.3.0",
+    "passlib[bcrypt]==1.7.4",
+    "google-genai==2.22.0",
+    "pydantic==2.12.5",
+    "pydantic-settings==2.5.0",
+    "reportlab==4.2.0",
+    "python-docx==1.1.0",
+    "aiofiles==24.1.0",
+    "httpx==0.28.1",
+    "python-dotenv==1.0.1",
+]
+
+[dependency-groups]
+dev = [
+    "pytest==8.3.0",
+    "pytest-asyncio==0.24.0",
+]
+
+[tool.vercel]
+entrypoint = "api.index:app"
+
+[tool.vercel.scripts]
+build = "echo 'no-op'"

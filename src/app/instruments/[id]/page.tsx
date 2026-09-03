@@ -406,7 +406,7 @@ export default function InstrumentDetailPage({ params }: { params: Promise<{ id:
           columns={TEST_HISTORY_COLUMNS}
           data={testHistory}
           rowKey={(row) => row.id}
-          onRowClick={(row) => router.push(`/tests/${row.id}`)}
+          onRowClick={(row) => router.push(`/tests?highlight=${row.id}`)}
           sort={{ key: 'completedAt', direction: 'desc' }}
           emptyState={
             <div className="py-8 text-center text-[13px] text-gray-500">

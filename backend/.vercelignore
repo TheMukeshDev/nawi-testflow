@@ -1,0 +1,19 @@
+# Never ship secrets from the backend to Vercel.
+.env
+.env.*
+!.env.example
+
+# Python artifacts
+__pycache__/
+**/__pycache__/
+*.pyc
+.venv/
+venv/
+dist/
+build/
+
+# Tests and demo data are not needed at runtime
+tests/
+demo/
+*.pytest_cache
+.pytest_cache/
