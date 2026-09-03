@@ -498,17 +498,12 @@ ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
 -- RLS POLICIES
 -- ============================================================================
 
--- Profiles: Users can read their own profile, admins can read all
+-- Profiles: Users can read their own profile.
+-- NOTE: Admin-wide profile access is provided by 002_rls_policies.sql via the
+-- SECURITY DEFINER is_admin() helper, which avoids infinite recursion from a
+-- self-referencing profiles subquery in a policy on the profiles table.
 CREATE POLICY "Users can view own profile" ON profiles
     FOR SELECT USING (auth.uid() = auth_user_id);
-
-CREATE POLICY "Admins can view all profiles" ON profiles
-    FOR SELECT USING (
-        EXISTS (
-            SELECT 1 FROM profiles
-            WHERE auth_user_id = auth.uid() AND role = 'admin'
-        )
-    );
 
 -- Laboratories: All authenticated users can read active labs
 CREATE POLICY "Authenticated users can view active laboratories" ON laboratories
