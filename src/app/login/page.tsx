@@ -8,16 +8,16 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
-import { getRoleDisplayName } from '@/lib/auth';
 
 export default function LoginPage() {
-  const { login, isAuthenticated, userRole, getRoleRedirectPath } = useAuth();
+  const { login, getRoleRedirectPath } = useAuth();
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [loginSuccess, setLoginSuccess] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,7 +25,7 @@ export default function LoginPage() {
     setIsSubmitting(true);
     try {
       await login(email, password);
-      setLoginSuccess(true);
+      router.push(getRoleRedirectPath());
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'An unexpected error occurred';
       if (msg.includes('Invalid login credentials')) {
@@ -37,45 +37,6 @@ export default function LoginPage() {
       setIsSubmitting(false);
     }
   };
-
-  if (loginSuccess && isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex flex-col">
-        <header className="border-b border-gray-200 bg-white">
-          <div className="max-w-[1200px] mx-auto px-4 sm:px-6 h-[56px] flex items-center">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="w-[28px] h-[28px] bg-[#1e3a5f] rounded-sm flex items-center justify-center">
-                <span className="text-white text-[11px] font-bold">NW</span>
-              </div>
-              <span className="text-[14px] font-semibold text-gray-900">NAWI TestFlow</span>
-            </Link>
-          </div>
-        </header>
-        <main className="flex-1 flex items-center justify-center px-4">
-          <div className="w-full max-w-[360px] bg-white border border-gray-200 rounded-sm p-6 text-center">
-            <div className="mb-4 flex justify-center">
-              <div className="w-[48px] h-[48px] rounded-full bg-green-50 flex items-center justify-center">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2">
-                  <path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </div>
-            </div>
-            <h1 className="text-[16px] font-semibold text-gray-900 mb-1">Signed In Successfully</h1>
-            <p className="text-[13px] text-gray-600 mb-1">Welcome back. You are signed in as:</p>
-            <p className="text-[13px] font-semibold text-gray-900 mb-4">
-              {userRole ? getRoleDisplayName(userRole) : 'User'}
-            </p>
-            <Link
-              href={getRoleRedirectPath()}
-              className="inline-flex items-center justify-center w-full h-[36px] bg-[#1e3a5f] text-white text-[13px] font-medium rounded-sm hover:bg-[#162d4a] transition-colors"
-            >
-              Go to Dashboard
-            </Link>
-          </div>
-        </main>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
