@@ -25,6 +25,14 @@ export const ROLES: Record<UserRole, string> = {
   viewer: 'Viewer',
 };
 
+// Role-based dashboard landing paths
+export const ROLE_DASHBOARD_PATHS: Record<UserRole, string> = {
+  admin: '/admin',
+  tester: '/tester',
+  reviewer: '/reviewer',
+  viewer: '/viewer',
+};
+
 // ============================================================================
 // PERMISSION DEFINITIONS
 // ============================================================================

@@ -23,6 +23,8 @@ import { Input, Select } from '@/components/ui/FormControls';
 import { Badge } from '@/components/ui/Badge';
 import { NoResults } from '@/components/ui/EmptyState';
 import { useAuth } from '@/lib/auth-context';
+import { supabaseDb } from '@/lib/supabase-db';
+import { LoadingState } from '@/components/ui/EmptyState';
 
 // ============================================================================
 // TYPES
@@ -50,63 +52,6 @@ interface LabRecord {
 // ============================================================================
 // MOCK DATA
 // ============================================================================
-
-const MOCK_LABS: LabRecord[] = [
-  {
-    id: '1',
-    name: 'Central Metrology Testing Lab',
-    code: 'CMTL-PY-01',
-    city: 'Prayagraj',
-    state: 'Uttar Pradesh',
-    country: 'India',
-    accreditationBody: 'NABL',
-    accreditationNumber: 'NABL-0123',
-    accreditationValidUntil: '2027-03-31',
-    contactPerson: 'Dr. K. Sharma',
-    phone: '+91-532-240-2700',
-    email: 'cmtl-py@laboratory.example.in',
-    isActive: true,
-    instrumentCount: 15,
-    activeTests: 3,
-    createdAt: '2020-01-15',
-  },
-  {
-    id: '2',
-    name: 'Prayagraj Instrument Testing Lab',
-    code: 'PITL-PR-02',
-    city: 'Prayagraj',
-    state: 'Uttar Pradesh',
-    country: 'India',
-    accreditationBody: 'NABL',
-    accreditationNumber: 'NABL-0456',
-    accreditationValidUntil: '2027-06-15',
-    contactPerson: 'Dr. A. Patel',
-    phone: '+91-532-265-2700',
-    email: 'pitl-pr@laboratory.example.in',
-    isActive: true,
-    instrumentCount: 12,
-    activeTests: 1,
-    createdAt: '2021-03-20',
-  },
-  {
-    id: '3',
-    name: 'North Zone Calibration Laboratory',
-    code: 'NZCL-DL-03',
-    city: 'New Delhi',
-    state: 'Delhi',
-    country: 'India',
-    accreditationBody: 'NABL',
-    accreditationNumber: 'NABL-0789',
-    accreditationValidUntil: '2026-12-31',
-    contactPerson: 'Dr. R. Krishnan',
-    phone: '+91-11-2830-2700',
-    email: 'nzcl-dl@laboratory.example.in',
-    isActive: true,
-    instrumentCount: 8,
-    activeTests: 0,
-    createdAt: '2022-06-10',
-  },
-];
 
 // ============================================================================
 // FILTER CONFIGURATION
@@ -211,11 +156,48 @@ export default function LaboratoriesPage() {
   const [statusFilter, setStatusFilter] = React.useState('all');
   const [sort, setSort] = React.useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'code', direction: 'asc' });
   const [page, setPage] = React.useState(1);
+  const [labs, setLabs] = React.useState<LabRecord[]>([]);
+  const [loading, setLoading] = React.useState(true);
   const pageSize = 25;
+
+  // Load real laboratory data from Supabase on mount
+  React.useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const rows = await supabaseDb.getLaboratories();
+        if (!mounted) return;
+        const mapped: LabRecord[] = rows.map((r) => ({
+          id: r.id,
+          name: r.name,
+          code: r.code,
+          city: r.city,
+          state: r.state,
+          country: r.country,
+          accreditationBody: r.accreditationBody,
+          accreditationNumber: '',
+          accreditationValidUntil: r.accreditationValidUntil || '',
+          contactPerson: r.contactPerson,
+          phone: r.phone,
+          email: r.email,
+          isActive: r.isActive,
+          instrumentCount: 0,
+          activeTests: 0,
+          createdAt: '',
+        }));
+        setLabs(mapped);
+      } catch (err) {
+        console.warn('Failed to load laboratories:', err);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
 
   // Filter data
   const filteredData = React.useMemo(() => {
-    let result = [...MOCK_LABS];
+    let result = [...labs];
 
     // Deep search: any field, nested values, numbers — null-safe
     if (searchQuery) {
@@ -238,7 +220,7 @@ export default function LaboratoriesPage() {
     });
 
     return result;
-  }, [searchQuery, statusFilter, sort]);
+  }, [searchQuery, statusFilter, sort, labs]);
 
   // Paginate
   const paginatedData = filteredData.slice((page - 1) * pageSize, page * pageSize);
@@ -284,30 +266,33 @@ export default function LaboratoriesPage() {
         </span>
       </div>
 
-      {/* ── Data Table ── */}
-      <DataTable
-        columns={COLUMNS}
-        data={paginatedData}
-        rowKey={(row) => row.id}
-        sort={sort}
-        onSortChange={setSort}
-        pagination={{
-          page,
-          pageSize,
-          total: filteredData.length,
-        }}
-        onPageChange={setPage}
-        onRowClick={(row) => window.location.href = `/laboratories/${row.id}`}
-        emptyState={
-          <NoResults
-            onClearFilters={() => {
-              setDashboardSearch('');
-              setStatusFilter('all');
-            }}
-          />
-        }
-        caption="Testing laboratories"
-      />
+      {loading ? (
+        <LoadingState message="Loading laboratories…" />
+      ) : (
+        <DataTable
+          columns={COLUMNS}
+          data={paginatedData}
+          rowKey={(row) => row.id}
+          sort={sort}
+          onSortChange={setSort}
+          pagination={{
+            page,
+            pageSize,
+            total: filteredData.length,
+          }}
+          onPageChange={setPage}
+          onRowClick={(row) => window.location.href = `/laboratories/${row.id}`}
+          emptyState={
+            <NoResults
+              onClearFilters={() => {
+                setDashboardSearch('');
+                setStatusFilter('all');
+              }}
+            />
+          }
+          caption="Testing laboratories"
+        />
+      )}
     </Shell>
   );
 }

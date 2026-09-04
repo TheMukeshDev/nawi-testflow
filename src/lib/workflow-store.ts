@@ -349,6 +349,14 @@ function isBrowser(): boolean {
   return typeof window !== 'undefined';
 }
 
+function statusFromDb(status?: unknown): TestStatus {
+  const s = String(status || '').toLowerCase();
+  if (['approved', 'completed'].includes(s)) return 'completed';
+  if (['revision-requested', 'rejected'].includes(s)) return 'revision-requested';
+  if (s === 'pending-review') return 'pending-review';
+  return 'in-testing';
+}
+
 function loadData<T>(key: string, fallback: T): T {
   if (!isBrowser()) return fallback;
   try {
@@ -783,6 +791,44 @@ export const workflowStore = {
         }
       }
     } catch {}
+  },
+
+  /**
+   * Merge live Supabase test reports into the workflow store (client-side).
+   * Existing local records are matched by test number; new DB reports are
+   * prepended so they appear on dashboards without losing local workflow state.
+   */
+  async mergeFromSupabase(): Promise<void> {
+    if (!isBrowser()) return;
+    try {
+      const dbReports = (await import('./supabase-db')).supabaseDb;
+      const rows = await dbReports.getTestReports();
+      if (!Array.isArray(rows) || rows.length === 0) return;
+
+      const existing = this.getTests();
+      const byNumber = new Map(existing.map(t => [t.testNumber, t]));
+      const merged: StoredTest[] = [...existing];
+
+      for (const row of rows) {
+        const existingRow = byNumber.get(row.testNumber);
+        if (existingRow) {
+          // Keep local workflow fields (technician, review notes, revision cycle)
+          // but reflect the authoritative status from the DB.
+          const status = statusFromDb(row.status);
+          if (existingRow.status !== status) {
+            existingRow.status = status;
+            existingRow.lastUpdated = row.lastUpdated || existingRow.lastUpdated;
+          }
+          if (!existingRow.technician) existingRow.technician = row.technician || '';
+        } else {
+          merged.unshift(row);
+        }
+      }
+
+      saveData(STORAGE_KEYS.TESTS, merged);
+    } catch (err) {
+      console.warn('[WorkflowStore] mergeFromSupabase failed:', err);
+    }
   },
 
   // Reports

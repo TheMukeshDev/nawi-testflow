@@ -25,6 +25,8 @@ import { Alert } from '@/components/ui/Alert';
 import { NoResults } from '@/components/ui/EmptyState';
 import { useAuth } from '@/lib/auth-context';
 import { getCalibrationStatus, getCalibrationStatusConfig } from '@/components/forms/EquipmentForm';
+import { supabaseDb } from '@/lib/supabase-db';
+import { LoadingState } from '@/components/ui/EmptyState';
 
 // ============================================================================
 // TYPES
@@ -51,101 +53,24 @@ interface EquipmentRecord {
 // MOCK DATA
 // ============================================================================
 
-const MOCK_EQUIPMENT: EquipmentRecord[] = [
-  {
-    id: '1',
-    equipmentId: 'STD-E2-001',
-    name: 'E2 Standard Weight Set',
-    type: 'Standard Weight',
-    manufacturer: 'Precision Weigh Systems',
-    model: 'PWS-STD-E2',
-    serialNumber: 'STD-E2-001',
-    calibrationDate: '2026-03-15',
-    calibrationValidUntil: '2027-03-15',
-    calibrationCertificateRef: 'CAL-2026-00123',
-    laboratoryCode: 'CMTL-PY-01',
-    laboratoryName: 'Central Metrology Testing Lab',
-    condition: 'good',
-    createdAt: '2026-03-15',
-  },
-  {
-    id: '2',
-    equipmentId: 'STD-M2-003',
-    name: 'M2 Calibration Weight Set',
-    type: 'Standard Weight',
-    manufacturer: 'ABC Instruments Pvt. Ltd.',
-    model: 'ABC-STD-M2',
-    serialNumber: 'STD-M2-003',
-    calibrationDate: '2026-05-20',
-    calibrationValidUntil: '2027-05-20',
-    calibrationCertificateRef: 'CAL-2026-00456',
-    laboratoryCode: 'CMTL-PY-01',
-    laboratoryName: 'Central Metrology Testing Lab',
-    condition: 'good',
-    createdAt: '2026-05-20',
-  },
-  {
-    id: '3',
-    equipmentId: 'ENV-001',
-    name: 'Environmental Monitor',
-    type: 'Measurement Device',
-    manufacturer: 'MetroScale Technologies',
-    model: 'MST-ENV-120',
-    serialNumber: 'ENV-001',
-    calibrationDate: '2026-01-10',
-    calibrationValidUntil: '2026-07-10',
-    calibrationCertificateRef: 'CAL-2026-00789',
-    laboratoryCode: 'PITL-PR-02',
-    laboratoryName: 'Prayagraj Instrument Testing Lab',
-    condition: 'good',
-    createdAt: '2026-01-10',
-  },
-  {
-    id: '4',
-    equipmentId: 'STD-F1-002',
-    name: 'F1 Standard Weight Set',
-    type: 'Standard Weight',
-    manufacturer: 'ABC Instruments Pvt. Ltd.',
-    model: 'ABC-STD-F1',
-    serialNumber: 'STD-F1-002',
-    calibrationDate: '2025-12-01',
-    calibrationValidUntil: '2026-12-01',
-    calibrationCertificateRef: 'CAL-2025-01111',
-    laboratoryCode: 'CMTL-PY-01',
-    laboratoryName: 'Central Metrology Testing Lab',
-    condition: 'good',
-    createdAt: '2025-12-01',
-  },
-  {
-    id: '5',
-    equipmentId: 'TOOL-001',
-    name: 'Forceps Set',
-    type: 'Tool',
-    manufacturer: '—',
-    model: '—',
-    serialNumber: 'TOOL-001',
-    calibrationDate: '',
-    calibrationValidUntil: '',
-    calibrationCertificateRef: '',
-    laboratoryCode: 'CMTL-PY-01',
-    laboratoryName: 'Central Metrology Testing Lab',
-    condition: 'good',
-    createdAt: '2024-06-15',
-  },
-];
-
 // ============================================================================
 // FILTER CONFIGURATION
 // ============================================================================
 
 const TYPE_FILTERS = [
   { label: 'All Types', value: 'all' },
-  { label: 'Standard Weight', value: 'Standard Weight' },
-  { label: 'Calibrated Weight', value: 'Calibrated Weight' },
-  { label: 'Measurement Device', value: 'Measurement Device' },
-  { label: 'Accessory', value: 'Accessory' },
-  { label: 'Tool', value: 'Tool' },
+  { label: 'Standard Weight', value: 'standard-weight' },
+  { label: 'Calibrated Weight', value: 'calibrated-weight' },
+  { label: 'Accessory', value: 'accessory' },
+  { label: 'Tool', value: 'tool' },
 ];
+
+const TYPE_LABELS: Record<string, string> = {
+  'standard-weight': 'Standard Weight',
+  'calibrated-weight': 'Calibrated Weight',
+  accessory: 'Accessory',
+  tool: 'Tool',
+};
 
 const CALIBRATION_FILTERS = [
   { label: 'All Calibration', value: 'all' },
@@ -178,6 +103,7 @@ const COLUMNS: ColumnDef<EquipmentRecord>[] = [
     key: 'type',
     header: 'Type',
     width: 112,
+    render: (_, row) => TYPE_LABELS[row.type] || row.type,
   },
   {
     key: 'serialNumber',
@@ -262,19 +188,54 @@ export default function EquipmentPage() {
   const [calibrationFilter, setCalibrationFilter] = React.useState('all');
   const [sort, setSort] = React.useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'equipmentId', direction: 'asc' });
   const [page, setPage] = React.useState(1);
+  const [equipment, setEquipment] = React.useState<EquipmentRecord[]>([]);
+  const [loading, setLoading] = React.useState(true);
   const pageSize = 25;
 
+  // Load real equipment data from Supabase on mount
+  React.useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const rows = await supabaseDb.getEquipment();
+        if (!mounted) return;
+        const mapped: EquipmentRecord[] = (rows as any[]).map((r, i) => ({
+          id: r.id,
+          equipmentId: r.serialNumber || `EQ-${i + 1}`,
+          name: r.name || '',
+          type: r.type || 'tool',
+          manufacturer: r.manufacturer || '—',
+          model: r.model || '—',
+          serialNumber: r.serialNumber || '',
+          calibrationDate: r.calibrationDate || '',
+          calibrationValidUntil: r.calibrationValidUntil || '',
+          calibrationCertificateRef: '',
+          laboratoryCode: r.laboratoryCode || '',
+          laboratoryName: r.laboratoryName || '',
+          condition: (r.condition as EquipmentRecord['condition']) || 'good',
+          createdAt: r.createdAt || '',
+        }));
+        setEquipment(mapped);
+      } catch (err) {
+        console.warn('Failed to load equipment:', err);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
   // Calculate calibration warnings
-  const expiredCount = MOCK_EQUIPMENT.filter(e =>
+  const expiredCount = equipment.filter(e =>
     getCalibrationStatus(e.calibrationDate, e.calibrationValidUntil) === 'expired'
   ).length;
-  const dueSoonCount = MOCK_EQUIPMENT.filter(e =>
+  const dueSoonCount = equipment.filter(e =>
     getCalibrationStatus(e.calibrationDate, e.calibrationValidUntil) === 'due-soon'
   ).length;
 
   // Filter data
   const filteredData = React.useMemo(() => {
-    let result = [...MOCK_EQUIPMENT];
+    let result = [...equipment];
 
     // Deep search: any field, nested values, numbers — null-safe
     if (searchQuery) {
@@ -303,7 +264,7 @@ export default function EquipmentPage() {
     });
 
     return result;
-  }, [searchQuery, typeFilter, calibrationFilter, sort]);
+  }, [searchQuery, typeFilter, calibrationFilter, sort, equipment]);
 
   // Paginate
   const paginatedData = filteredData.slice((page - 1) * pageSize, page * pageSize);
@@ -372,32 +333,34 @@ export default function EquipmentPage() {
         </span>
       </div>
 
-      {/* ── Data Table ── */}
-      <DataTable
-        columns={COLUMNS}
-        data={paginatedData}
-        rowKey={(row) => row.id}
-        sort={sort}
-        onSortChange={setSort}
-        pagination={{
-          page,
-          pageSize,
-          total: filteredData.length,
-        }}
-        onPageChange={setPage}
-        onRowClick={(row) => window.location.href = `/equipment/${row.id}`}
-        selectable
-        emptyState={
-          <NoResults
-            onClearFilters={() => {
-              setDashboardSearch('');
-              setTypeFilter('all');
-              setCalibrationFilter('all');
-            }}
-          />
-        }
-        caption="Test equipment and calibration standards"
-      />
+      {loading ? (
+        <LoadingState message="Loading equipment…" />
+      ) : (
+        <DataTable
+          columns={COLUMNS}
+          data={paginatedData}
+          rowKey={(row) => row.id}
+          sort={sort}
+          onSortChange={setSort}
+          pagination={{
+            page,
+            pageSize,
+            total: filteredData.length,
+          }}
+          onPageChange={setPage}
+          onRowClick={(row) => window.location.href = `/equipment/${row.id}`}
+          emptyState={
+            <NoResults
+              onClearFilters={() => {
+                setDashboardSearch('');
+                setTypeFilter('all');
+                setCalibrationFilter('all');
+              }}
+            />
+          }
+          caption="Test equipment and calibration standards"
+        />
+      )}
     </Shell>
   );
 }

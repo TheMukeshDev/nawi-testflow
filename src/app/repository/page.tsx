@@ -36,6 +36,8 @@ export default function RepositoryPage() {
 
   useEffect(() => {
     loadRepositoryData();
+    // Merge live Supabase test reports so the audit trail reflects real records
+    workflowStore.mergeFromSupabase().then(loadRepositoryData).catch(loadRepositoryData);
     const unsub = workflowStore.subscribe(loadRepositoryData);
     return () => unsub();
   }, []);
@@ -50,16 +52,16 @@ export default function RepositoryPage() {
   const getActionBadge = (action: WorkflowHistoryEntry['action']) => {
     switch (action) {
       case 'APPROVED':
-        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">✓ APPROVED</span>;
+        return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300"><svg width="9" height="9" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 6.5l2.5 2.5L10 3.5" /></svg>APPROVED</span>;
       case 'DISAPPROVED':
-        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-800 border border-red-300">⚠️ DISAPPROVED</span>;
+        return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-800 border border-red-300"><svg width="9" height="9" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 2v4M6 9.5h0" /></svg>DISAPPROVED</span>;
       case 'UPDATED':
-        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-300">✏️ UPDATED &amp; RESUBMITTED</span>;
+        return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-300"><svg width="9" height="9" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M8.5 1.5a1.5 1.5 0 012 2L5 9 1 10l1-4z" /></svg>UPDATED &amp; RESUBMITTED</span>;
       case 'REVISED':
-        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300">⚠️ REVISION REQUESTED</span>;
+        return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300"><svg width="9" height="9" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 2v4M6 9.5h0" /></svg>REVISION REQUESTED</span>;
       case 'SUBMITTED':
       default:
-        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-300">📤 SUBMITTED</span>;
+        return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-300"><svg width="9" height="9" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9.5v-7M3 5.5L6 2.5l3 3" /><path d="M2 10.5h8" /></svg>SUBMITTED</span>;
     }
   };
 
@@ -80,7 +82,7 @@ export default function RepositoryPage() {
               : 'text-gray-500 hover:text-gray-900'
           }`}
         >
-          <span>📜 Lifecycle &amp; Audit History Log</span>
+          <span className="inline-flex items-center gap-1.5"><svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 8.5V2.5h6v6l-3 2-3-2z" /><path d="M5 4.5h4" /></svg>Lifecycle &amp; Audit History Log</span>
           <span className="ml-2 px-1.5 py-0.2 bg-gray-100 text-gray-700 text-[11px] rounded-full">
             {history.length}
           </span>
@@ -94,7 +96,7 @@ export default function RepositoryPage() {
               : 'text-gray-500 hover:text-gray-900'
           }`}
         >
-          <span>📁 All Test &amp; Report Records</span>
+          <span className="inline-flex items-center gap-1.5"><svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M2 2.5h10v9H2z" /><path d="M5 5h4" /></svg>All Test &amp; Report Records</span>
           <span className="ml-2 px-1.5 py-0.2 bg-gray-100 text-gray-700 text-[11px] rounded-full">
             {tests.length}
           </span>

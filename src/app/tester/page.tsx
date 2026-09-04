@@ -14,6 +14,8 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { RouteGuard } from '@/components/auth/RouteGuard';
 import { TestStatusBadge } from '@/components/ui/StatusBadge';
 import { SearchInput } from '@/components/ui/SearchInput';
+import { MetricCard } from '@/components/ui/MetricCard';
+import { SectionHeader } from '@/components/ui/SectionHeader';
 import { useDashboardSearch, setDashboardSearch } from '@/components/layout/DashboardSearchContext';
 import { workflowStore, type StoredTest } from '@/lib/workflow-store';
 import { deepSearch } from '@/lib/search';
@@ -34,6 +36,8 @@ export default function TesterDashboard() {
 
   useEffect(() => {
     refreshData();
+    // Merge live Supabase test reports so real data appears alongside local drafts
+    workflowStore.mergeFromSupabase().then(refreshData).catch(refreshData);
     const unsubscribe = workflowStore.subscribe(() => {
       refreshData();
     });
@@ -65,18 +69,19 @@ export default function TesterDashboard() {
           if (test) openTestModal(test);
         }}
       >
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-5">
           <div>
             <h1 className="text-[18px] font-semibold text-gray-900">
               Testing Workspace & Report Management
             </h1>
-            <p className="text-[12px] text-gray-500 mt-0.5">
+            <div className="h-[2px] w-[48px] bg-[#1e3a5f] mt-2 rounded" />
+            <p className="text-[12px] text-gray-500 mt-2">
               Record instrument observations, run calculations, and submit for verification
             </p>
           </div>
           <Link
             href="/tests/new"
-            className="px-4 py-2 bg-[#1e3a5f] hover:bg-[#162d4a] text-white text-[13px] font-medium rounded transition-colors self-start sm:self-auto shadow-2xs inline-flex items-center gap-1.5"
+            className="px-4 py-2 bg-[#1e3a5f] hover:bg-[#162d4a] text-white text-[13px] font-medium rounded transition-colors self-start sm:self-auto shadow-xs inline-flex items-center gap-1.5"
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M7 2v10M2 7h10" strokeLinecap="round" />
@@ -89,7 +94,11 @@ export default function TesterDashboard() {
         {revisionTests.length > 0 && (
           <div className="mb-5 border border-amber-400 bg-amber-50 rounded-md overflow-hidden">
             <div className="flex items-center gap-2 px-4 py-2.5 bg-amber-100 border-b border-amber-300">
-              <span className="text-[13px]">⚠️</span>
+              <svg width="16" height="16" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="text-amber-700 shrink-0">
+                <path d="M9 2l7 13H2z" />
+                <path d="M9 7v3.5" />
+                <circle cx="9" cy="13" r="0.5" fill="currentColor" />
+              </svg>
               <h2 className="text-[13px] font-bold text-amber-900">
                 Action Required — {revisionTests.length} test{revisionTests.length > 1 ? 's' : ''} returned by Reviewer for correction
               </h2>
@@ -139,18 +148,57 @@ export default function TesterDashboard() {
         />
 
         {/* ── Metrics ── */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-          <MetricCard label="Active / In-Testing" value={String(activeTests.length)} color="primary" />
-          <MetricCard label="Pending Review" value={String(submittedTests.length)} color="warning" />
-          <MetricCard label="Completed & Approved" value={String(completedTests.length)} color="success" />
-          <MetricCard label="Total Records" value={String(tests.length)} color="gray" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 mb-6">
+          <MetricCard
+            label="Active / In-Testing"
+            value={activeTests.length}
+            tone="primary"
+            icon={
+              <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="4" y="2.5" width="12" height="15" rx="1" />
+                <path d="M7 6.5h6M7 10h4" />
+                <circle cx="13" cy="13" r="1.4" />
+              </svg>
+            }
+          />
+          <MetricCard
+            label="Pending Review"
+            value={submittedTests.length}
+            tone="warning"
+            icon={
+              <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="10" cy="10" r="7" />
+                <path d="M10 6v4l2.5 2.5" />
+              </svg>
+            }
+          />
+          <MetricCard
+            label="Completed & Approved"
+            value={completedTests.length}
+            tone="success"
+            icon={
+              <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="10" cy="10" r="7" />
+                <path d="M6.5 10l2.5 2.5 4.5-5" />
+              </svg>
+            }
+          />
+          <MetricCard
+            label="Total Records"
+            value={tests.length}
+            tone="gray"
+            icon={
+              <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 3.5h10v13H5z" />
+                <path d="M5 7h10M5 10.5h6" />
+              </svg>
+            }
+          />
         </div>
 
         {/* ── Active Tests ── */}
         <div className="mb-6">
-          <h2 className="text-[14px] font-semibold text-gray-900 mb-3">
-            Active & Pending Review Tests
-          </h2>
+          <SectionHeader title="Active & Pending Review Tests" count={visibleActive.length} />
           <div className="bg-white border border-gray-200 rounded overflow-hidden shadow-2xs">
             {visibleActive.length === 0 ? (
               <div className="py-8 text-center text-gray-400 text-[13px]">
@@ -205,9 +253,12 @@ export default function TesterDashboard() {
                         {t.status === 'revision-requested' && (
                           <button
                             onClick={() => openTestModal(t)}
-                            className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded text-[11px] font-semibold transition-colors cursor-pointer shadow-xs"
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded text-[11px] font-semibold transition-colors cursor-pointer shadow-xs"
                           >
-                            ⚠️ Edit &amp; Resubmit
+                            <svg width="11" height="11" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M9.5 1.5a1.8 1.8 0 012.5 2.5L4.5 11.5 1 12.5l1-3.5z" />
+                            </svg>
+                            Edit &amp; Resubmit
                           </button>
                         )}
                         {t.status === 'in-testing' && (
@@ -229,9 +280,7 @@ export default function TesterDashboard() {
 
         {/* ── Completed Test Results ── */}
         <div>
-          <h2 className="text-[14px] font-semibold text-gray-900 mb-3">
-            Completed & Approved Test Reports
-          </h2>
+          <SectionHeader title="Completed & Approved Test Reports" count={visibleCompleted.length} />
           <div className="bg-white border border-gray-200 rounded overflow-hidden shadow-2xs">
             {visibleCompleted.length === 0 ? (
               <div className="py-8 text-center text-gray-400 text-[13px]">
@@ -315,28 +364,5 @@ export default function TesterDashboard() {
         />
       </DashboardLayout>
     </RouteGuard>
-  );
-}
-
-function MetricCard({ label, value, color }: { label: string; value: string; color: string }) {
-  const borderColors: Record<string, string> = {
-    gray: 'border-t-gray-400',
-    primary: 'border-t-primary-500',
-    warning: 'border-t-warning-500',
-    success: 'border-t-success-500',
-    info: 'border-t-info-500',
-  };
-
-  return (
-    <div className={`bg-white border border-gray-200 rounded border-t-2 ${borderColors[color]}`}>
-      <div className="px-3 py-2.5">
-        <div className="text-[11px] font-medium text-gray-500 uppercase tracking-wide mb-1">
-          {label}
-        </div>
-        <div className="text-[22px] font-bold text-gray-900 leading-none">
-          {value}
-        </div>
-      </div>
-    </div>
   );
 }

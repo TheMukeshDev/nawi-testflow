@@ -23,6 +23,8 @@ import { Input, Select } from '@/components/ui/FormControls';
 import { Badge } from '@/components/ui/Badge';
 import { NoResults } from '@/components/ui/EmptyState';
 import { useAuth } from '@/lib/auth-context';
+import { supabaseDb } from '@/lib/supabase-db';
+import { LoadingState } from '@/components/ui/EmptyState';
 import type { InstrumentClass } from '@/types';
 
 // ============================================================================
@@ -51,99 +53,6 @@ interface InstrumentRecord {
 // ============================================================================
 // MOCK DATA
 // ============================================================================
-
-const MOCK_INSTRUMENTS: InstrumentRecord[] = [
-  {
-    id: '1',
-    serialNumber: 'ABC-2026-EL-00412',
-    modelName: 'ABC-3000 Electronic Balance',
-    modelNumber: 'ABC-3000',
-    manufacturerName: 'ABC Instruments Pvt. Ltd.',
-    instrumentClass: 'III',
-    maxCapacity: 3000,
-    maxCapacityUnit: 'g',
-    scaleInterval: 0.01,
-    scaleIntervalUnit: 'g',
-    laboratoryCode: 'CMTL-PY-01',
-    laboratoryName: 'Central Metrology Testing Lab',
-    condition: 'good',
-    lastCalibration: '2026-06-15',
-    testCount: 24,
-    dateReceived: '2024-01-15',
-  },
-  {
-    id: '2',
-    serialNumber: 'PWS-2025-PR-00089',
-    modelName: 'PWS Precision Scale 220',
-    modelNumber: 'PWS-220',
-    manufacturerName: 'Precision Weigh Systems',
-    instrumentClass: 'II',
-    maxCapacity: 220,
-    maxCapacityUnit: 'g',
-    scaleInterval: 0.001,
-    scaleIntervalUnit: 'g',
-    laboratoryCode: 'CMTL-PY-01',
-    laboratoryName: 'Central Metrology Testing Lab',
-    condition: 'good',
-    lastCalibration: '2026-07-20',
-    testCount: 18,
-    dateReceived: '2024-03-22',
-  },
-  {
-    id: '3',
-    serialNumber: 'MST-2024-EL-00247',
-    modelName: 'MetroScale 2000 Industrial',
-    modelNumber: 'MST-2000',
-    manufacturerName: 'MetroScale Technologies',
-    instrumentClass: 'III',
-    maxCapacity: 2000,
-    maxCapacityUnit: 'kg',
-    scaleInterval: 0.5,
-    scaleIntervalUnit: 'kg',
-    laboratoryCode: 'PITL-PR-02',
-    laboratoryName: 'Prayagraj Instrument Testing Lab',
-    condition: 'needs-repair',
-    lastCalibration: '2026-05-10',
-    testCount: 8,
-    dateReceived: '2023-11-05',
-  },
-  {
-    id: '4',
-    serialNumber: 'ABC-2025-EL-00589',
-    modelName: 'ABC-220 Analytical Balance',
-    modelNumber: 'ABC-220',
-    manufacturerName: 'ABC Instruments Pvt. Ltd.',
-    instrumentClass: 'II',
-    maxCapacity: 220,
-    maxCapacityUnit: 'g',
-    scaleInterval: 0.0001,
-    scaleIntervalUnit: 'g',
-    laboratoryCode: 'CMTL-PY-01',
-    laboratoryName: 'Central Metrology Testing Lab',
-    condition: 'good',
-    lastCalibration: '2026-08-01',
-    testCount: 12,
-    dateReceived: '2025-01-10',
-  },
-  {
-    id: '5',
-    serialNumber: 'PWS-2025-PL-00334',
-    modelName: 'PWS Platform Scale 3000',
-    modelNumber: 'PWS-3000P',
-    manufacturerName: 'Precision Weigh Systems',
-    instrumentClass: 'III',
-    maxCapacity: 3000,
-    maxCapacityUnit: 'kg',
-    scaleInterval: 1,
-    scaleIntervalUnit: 'kg',
-    laboratoryCode: 'PITL-PR-02',
-    laboratoryName: 'Prayagraj Instrument Testing Lab',
-    condition: 'out-of-service',
-    lastCalibration: '2026-02-15',
-    testCount: 3,
-    dateReceived: '2025-02-20',
-  },
-];
 
 // ============================================================================
 // FILTER CONFIGURATION
@@ -268,11 +177,48 @@ export default function InstrumentsPage() {
   const [classFilter, setClassFilter] = React.useState('all');
   const [sort, setSort] = React.useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'serialNumber', direction: 'asc' });
   const [page, setPage] = React.useState(1);
+  const [instruments, setInstruments] = React.useState<InstrumentRecord[]>([]);
+  const [loading, setLoading] = React.useState(true);
   const pageSize = 25;
+
+  // Load real instrument data from Supabase on mount
+  React.useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const rows = await supabaseDb.getInstruments();
+        if (!mounted) return;
+        const mapped: InstrumentRecord[] = rows.map((r) => ({
+          id: r.id,
+          serialNumber: r.serialNumber,
+          modelName: r.modelName,
+          modelNumber: r.modelNumber,
+          manufacturerName: r.manufacturerName,
+          instrumentClass: (r.instrumentClass as InstrumentClass) || null,
+          maxCapacity: r.maxCapacity,
+          maxCapacityUnit: 'g',
+          scaleInterval: r.scaleInterval,
+          scaleIntervalUnit: 'g',
+          laboratoryCode: r.laboratoryCode,
+          laboratoryName: r.laboratoryName,
+          condition: (r.condition as InstrumentRecord['condition']) || 'good',
+          lastCalibration: r.lastCalibration,
+          testCount: 0,
+          dateReceived: r.dateReceived || '',
+        }));
+        setInstruments(mapped);
+      } catch (err) {
+        console.warn('Failed to load instruments:', err);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
 
   // Filter data
   const filteredData = React.useMemo(() => {
-    let result = [...MOCK_INSTRUMENTS];
+    let result = [...instruments];
 
     // Deep search: any field, nested values, numbers — null-safe
     if (searchQuery) {
@@ -298,7 +244,7 @@ export default function InstrumentsPage() {
     });
 
     return result;
-  }, [searchQuery, conditionFilter, classFilter, sort]);
+  }, [searchQuery, conditionFilter, classFilter, sort, instruments]);
 
   // Paginate
   const paginatedData = filteredData.slice((page - 1) * pageSize, page * pageSize);
@@ -351,32 +297,34 @@ export default function InstrumentsPage() {
         </span>
       </div>
 
-      {/* ── Data Table ── */}
-      <DataTable
-        columns={COLUMNS}
-        data={paginatedData}
-        rowKey={(row) => row.id}
-        sort={sort}
-        onSortChange={setSort}
-        pagination={{
-          page,
-          pageSize,
-          total: filteredData.length,
-        }}
-        onPageChange={setPage}
-        onRowClick={(row) => window.location.href = `/instruments/${row.id}`}
-        selectable
-        emptyState={
-          <NoResults
-            onClearFilters={() => {
-              setDashboardSearch('');
-              setConditionFilter('all');
-              setClassFilter('all');
-            }}
-          />
-        }
-        caption="Registered weighing instruments"
-      />
+      {loading ? (
+        <LoadingState message="Loading instruments…" />
+      ) : (
+        <DataTable
+          columns={COLUMNS}
+          data={paginatedData}
+          rowKey={(row) => row.id}
+          sort={sort}
+          onSortChange={setSort}
+          pagination={{
+            page,
+            pageSize,
+            total: filteredData.length,
+          }}
+          onPageChange={setPage}
+          onRowClick={(row) => window.location.href = `/instruments/${row.id}`}
+          emptyState={
+            <NoResults
+              onClearFilters={() => {
+                setDashboardSearch('');
+                setConditionFilter('all');
+                setClassFilter('all');
+              }}
+            />
+          }
+          caption="Registered weighing instruments"
+        />
+      )}
     </Shell>
   );
 }

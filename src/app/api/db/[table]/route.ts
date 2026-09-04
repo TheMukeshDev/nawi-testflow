@@ -15,6 +15,8 @@ const ALLOWED_TABLES = new Set([
   'profiles',
   'test_reports',
   'test_observations',
+  'test_cases',
+  'test_conditions',
   'laboratories',
   'instruments',
   'instrument_models',

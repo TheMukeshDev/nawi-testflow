@@ -367,20 +367,28 @@ export function TestResultModal({
                 <div className="border border-amber-300 bg-amber-50 rounded-sm p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                   <div>
                     <h4 className="text-[13px] font-bold text-amber-900 flex items-center gap-1.5">
-                      <span>⚠️</span> Revision Required by Reviewer
+                      <svg width="15" height="15" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                        <path d="M9 2l7 13H2z" />
+                        <path d="M9 7v3.5" />
+                        <circle cx="9" cy="13" r="0.5" fill="currentColor" />
+                      </svg>
+                      Revision Required by Reviewer
                     </h4>
                     <p className="text-[12px] text-amber-800 mt-0.5">
                       This test was disapproved / sent back for revision. Update your environmental readings or observations and resubmit.
                     </p>
                   </div>
-                  <Button
-                    variant="primary"
-                    size="md"
-                    onClick={() => setShowEditModal(true)}
-                    className="bg-amber-700 hover:bg-amber-800 text-white shrink-0 shadow-xs cursor-pointer"
-                  >
-                    ✏️ Edit &amp; Resubmit Test
-                  </Button>
+<Button
+                      variant="primary"
+                      size="md"
+                      onClick={() => setShowEditModal(true)}
+                      className="bg-amber-700 hover:bg-amber-800 text-white shrink-0 shadow-xs cursor-pointer"
+                    >
+                      <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mr-1.5 inline">
+                        <path d="M9.5 1.5a1.8 1.8 0 012.5 2.5L4.5 11.5 1 12.5l1-3.5z" />
+                      </svg>
+                      Edit &amp; Resubmit Test
+                    </Button>
                 </div>
               )}
 
@@ -390,7 +398,12 @@ export function TestResultModal({
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                     <div>
                       <h4 className="text-[13px] font-bold text-red-900 flex items-center gap-1.5">
-                        <span>⚠️</span> Disapprove / Revoke Approval
+                        <svg width="15" height="15" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                          <path d="M9 2l7 13H2z" />
+                          <path d="M9 7v3.5" />
+                          <circle cx="9" cy="13" r="0.5" fill="currentColor" />
+                        </svg>
+                        Disapprove / Revoke Approval
                       </h4>
                       <p className="text-[11.5px] text-red-700 mt-0.5">
                         If discrepancies or audit errors are discovered post-approval, you can revoke approval and send this report back to the tester.
@@ -483,7 +496,12 @@ export function TestResultModal({
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-[12px] font-medium rounded transition-colors shadow-2xs cursor-pointer"
                 title="Push to Ministry of Consumer Affairs National Portal"
               >
-                <span>🏛️ e-Maap Gateway</span>
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mr-1.5 inline">
+                  <path d="M7 2.5L.5 13.5h13z" />
+                  <path d="M7 6.5v3" />
+                  <circle cx="7" cy="11.5" r="0.4" fill="currentColor" />
+                </svg>
+                e-Maap Gateway
               </button>
             )}
 
@@ -494,7 +512,12 @@ export function TestResultModal({
               className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 text-[12px] font-medium rounded transition-colors"
               title="Inspect Public Cryptographic Ledger Verification"
             >
-              <span>🔍 Verify QR</span>
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mr-1.5 inline">
+                  <circle cx="7.5" cy="7.5" r="5" />
+                  <path d="M11.5 11.5l3 3" />
+                  <path d="M5.5 7.5h4" />
+                </svg>
+                Verify QR
             </a>
           </div>
 

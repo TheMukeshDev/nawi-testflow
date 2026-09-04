@@ -38,6 +38,8 @@ export default function TestsPage() {
 
   useEffect(() => {
     refreshTests();
+    // Merge live Supabase test reports into the list
+    workflowStore.mergeFromSupabase().then(refreshTests).catch(refreshTests);
     const unsubscribe = workflowStore.subscribe(() => {
       refreshTests();
     });

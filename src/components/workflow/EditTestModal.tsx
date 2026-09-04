@@ -129,12 +129,17 @@ export function EditTestModal({ open, onClose, test, onSaved }: EditTestModalPro
           {/* Reviewer's Feedback Banner */}
           {test.reviewNotes && (
             <div className="border border-red-200 bg-red-50/80 rounded-md p-3.5 text-[12.5px]">
-              <div className="font-bold text-red-900 flex items-center gap-1.5 mb-1">
-                <span>⚠️</span> Reviewer / Disapproval Remarks:
-              </div>
-              <p className="text-red-800 leading-relaxed pl-5">{test.reviewNotes}</p>
+<div className="font-bold text-red-900 flex items-center gap-1.5 mb-1">
+                  <svg width="15" height="15" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                    <path d="M9 2l7 13H2z" />
+                    <path d="M9 7v3.5" />
+                    <circle cx="9" cy="13" r="0.5" fill="currentColor" />
+                  </svg>
+                  Reviewer / Disapproval Remarks:
+                </div>
+                <p className="text-red-800 leading-relaxed pl-[21px]">{test.reviewNotes}</p>
               {test.reviewer && test.returnedAt && (
-                <p className="text-[11px] text-red-700 pl-5 mt-1">
+                <p className="text-[11px] text-red-700 pl-[21px] mt-1">
                   Returned by <strong>{test.reviewer}</strong> on{' '}
                   {new Date(test.returnedAt).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
                   {test.revisionCount ? <> &bull; Revision round {test.revisionCount}</> : null}

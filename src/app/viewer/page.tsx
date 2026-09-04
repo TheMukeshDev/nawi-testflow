@@ -10,6 +10,8 @@ import React, { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { useDashboardSearch, setDashboardSearch } from '@/components/layout/DashboardSearchContext';
 import { RouteGuard } from '@/components/auth/RouteGuard';
+import { MetricCard } from '@/components/ui/MetricCard';
+import { SectionHeader } from '@/components/ui/SectionHeader';
 import { workflowStore, type StoredTest, type StoredReport } from '@/lib/workflow-store';
 import { deepSearch } from '@/lib/search';
 import { labNameFor } from '@/lib/laboratories';
@@ -32,6 +34,8 @@ export default function ViewerDashboard() {
 
   useEffect(() => {
     refreshData();
+    // Merge live Supabase test reports so finalized certificates appear in the archive
+    workflowStore.mergeFromSupabase().then(refreshData).catch(refreshData);
     const unsubscribe = workflowStore.subscribe(() => {
       refreshData();
     });
@@ -63,16 +67,48 @@ export default function ViewerDashboard() {
           <h1 className="text-[18px] font-semibold text-gray-900">
             Public & Laboratory Archive Explorer
           </h1>
-          <p className="text-[12px] text-gray-500 mt-0.5">
+          <div className="h-[2px] w-[48px] bg-[#1e3a5f] mt-2 rounded" />
+          <p className="text-[12px] text-gray-500 mt-2">
             Search, view, and retrieve verified OIML R-76 test certificates and instrument verification records
           </p>
         </div>
 
         {/* ── Metrics ── */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
-          <MetricCard label="Total Finalized Reports" value={String(reports.length)} color="primary" />
-          <MetricCard label="Verified Instruments" value={String(completedTests.length)} color="success" />
-          <MetricCard label="Compliance Rate" value="100%" color="gray" />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
+          <MetricCard
+            label="Total Finalized Reports"
+            value={reports.length}
+            tone="primary"
+            icon={
+              <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 2.5h7l4 4v11H4z" />
+                <path d="M11 2.5v4h4" />
+                <path d="M7 10h6M7 13h4" />
+              </svg>
+            }
+          />
+          <MetricCard
+            label="Verified Instruments"
+            value={completedTests.length}
+            tone="success"
+            icon={
+              <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="10" cy="6" r="3" />
+                <path d="M6.5 10h7v2a3.5 3.5 0 01-3.5 3.5h0A3.5 3.5 0 016.5 12z" />
+              </svg>
+            }
+          />
+          <MetricCard
+            label="Compliance Rate"
+            value="100%"
+            tone="gray"
+            hint="Of finalized certificates"
+            icon={
+              <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10 2l2 4h4l-3 3 1 4-4-2-4 2 1-4-3-3h4z" />
+              </svg>
+            }
+          />
         </div>
 
         {/* ── Quick Search ── */}
@@ -103,14 +139,7 @@ export default function ViewerDashboard() {
 
         {/* ── Finalized Reports ── */}
         <div>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-[14px] font-semibold text-gray-900">
-              Approved Test Certificates
-            </h2>
-            <span className="text-[12px] text-gray-500">
-              Showing {filteredCompleted.length} records
-            </span>
-          </div>
+          <SectionHeader title="Approved Test Certificates" count={filteredCompleted.length} />
 
           <div className="bg-white border border-gray-200 rounded overflow-hidden shadow-2xs">
             {filteredCompleted.length === 0 ? (
@@ -189,26 +218,5 @@ export default function ViewerDashboard() {
         />
       </DashboardLayout>
     </RouteGuard>
-  );
-}
-
-function MetricCard({ label, value, color }: { label: string; value: string; color: string }) {
-  const borderColors: Record<string, string> = {
-    gray: 'border-t-gray-400',
-    primary: 'border-t-primary-500',
-    success: 'border-t-success-500',
-  };
-
-  return (
-    <div className={`bg-white border border-gray-200 rounded border-t-2 ${borderColors[color]}`}>
-      <div className="px-3 py-2.5">
-        <div className="text-[11px] font-medium text-gray-500 uppercase tracking-wide mb-1">
-          {label}
-        </div>
-        <div className="text-[22px] font-bold text-gray-900 leading-none">
-          {value}
-        </div>
-      </div>
-    </div>
   );
 }

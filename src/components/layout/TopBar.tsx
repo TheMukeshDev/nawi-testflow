@@ -35,7 +35,7 @@ export function TopBar({ breadcrumbs = [], onMenuToggle, onSelectTest }: TopBarP
   const canCreateTests = userRole === 'admin' || userRole === 'tester';
 
   return (
-    <header className="flex items-center h-[48px] bg-white border-b border-gray-200 px-3 sm:px-4 shrink-0">
+    <header className="flex items-center h-[52px] bg-white border-b border-gray-200 shadow-xs px-3 sm:px-4 shrink-0">
       {/* Mobile hamburger */}
       {onMenuToggle && (
         <button
@@ -75,10 +75,12 @@ export function TopBar({ breadcrumbs = [], onMenuToggle, onSelectTest }: TopBarP
       {/* Search — hidden on very small screens */}
       <div className="relative mr-2 sm:mr-3 hidden sm:block">
         <div className={cn(
-          'flex items-center gap-1.5 h-[30px] rounded-sm border px-2 text-[12px] transition-colors',
-          searchFocused ? 'border-[#1e3a5f] bg-white ring-1 ring-blue-200' : 'border-gray-200 bg-gray-50 hover:border-gray-300',
+          'flex items-center gap-1.5 h-[30px] rounded-sm border px-2 text-[12px] transition-all',
+          searchFocused
+            ? 'border-brand-500 bg-white ring-2 ring-brand-100 shadow-sm'
+            : 'border-gray-200 bg-gray-50 hover:border-gray-300 hover:bg-white',
         )}>
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-gray-400 shrink-0">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" className={cn('shrink-0', searchFocused ? 'text-brand-600' : 'text-gray-400')}>
             <circle cx="6" cy="6" r="4.5" />
             <path d="M9.5 9.5L13 13" strokeLinecap="round" />
           </svg>
@@ -112,12 +114,12 @@ export function TopBar({ breadcrumbs = [], onMenuToggle, onSelectTest }: TopBarP
 
       {/* Network Connectivity Status Indicator */}
       <div
-        className="mr-2 sm:mr-3 hidden md:flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-mono border transition-colors select-none"
-        style={{
-          borderColor: isOnline ? '#e2e8f0' : '#f59e0b',
-          backgroundColor: isOnline ? '#f8fafc' : '#fef3c7',
-          color: isOnline ? '#475569' : '#92400e',
-        }}
+        className={cn(
+          'mr-2 sm:mr-3 hidden md:flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-mono border transition-colors select-none',
+          isOnline
+            ? 'bg-gray-50 border-gray-200 text-gray-600'
+            : 'bg-warning-50 border-warning-300 text-warning-800',
+        )}
         title={isOnline ? 'Network Online — Connected to Central Metrology Server' : 'Offline Mode — Changes Saved to Local Browser Cache'}
       >
         <span className={`w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'}`} />
@@ -133,7 +135,7 @@ export function TopBar({ breadcrumbs = [], onMenuToggle, onSelectTest }: TopBarP
       {canCreateTests && (
         <Link
           href="/tests/new"
-          className="flex items-center gap-1.5 h-[30px] px-2.5 rounded-sm bg-[#1e3a5f] text-white text-[12px] font-medium hover:bg-[#162d4a] transition-colors"
+          className="flex items-center gap-1.5 h-[30px] px-2.5 rounded-sm bg-brand-600 text-white text-[12px] font-medium shadow-xs hover:bg-brand-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300 focus-visible:ring-offset-1"
         >
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             <path d="M6 2v8M2 6h8" />

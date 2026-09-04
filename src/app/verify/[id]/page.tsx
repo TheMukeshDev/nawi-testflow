@@ -76,6 +76,9 @@ export default function CertificateVerificationPage() {
       setPayloadTampered(false);
       setVerificationSource(null);
 
+      // Merge live Supabase records so QR lookups work for published certificates
+      await workflowStore.mergeFromSupabase().catch(() => {});
+
       // 1) Local registry match (same-browser flow)
       const foundTest = workflowStore.getTest(id);
       const foundReport = workflowStore.getReportByTestId(id) || workflowStore.getReports().find(r => r.reportNumber === id);
@@ -155,8 +158,18 @@ export default function CertificateVerificationPage() {
           </div>
         ) : !test ? (
           <div className="bg-white rounded-md p-8 text-center border border-red-200 shadow-xs">
-            <div className={`w-14 h-14 rounded-full ${payloadTampered ? 'bg-red-600/10 text-red-600' : 'bg-red-50 text-red-600'} flex items-center justify-center mx-auto mb-3 text-2xl font-bold`}>
-              {payloadTampered ? '⚠' : '✕'}
+            <div className={`w-14 h-14 rounded-full ${payloadTampered ? 'bg-red-600/10 text-red-600' : 'bg-red-50 text-red-600'} flex items-center justify-center mx-auto mb-3`}>
+              {payloadTampered ? (
+                <svg width="26" height="26" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 1.5l7.5 14.5H1.5z" />
+                  <path d="M9 6.5v4" />
+                  <circle cx="9" cy="13" r="0.6" fill="currentColor" />
+                </svg>
+              ) : (
+                <svg width="24" height="24" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                  <path d="M2.5 2.5l9 9M11.5 2.5l-9 9" />
+                </svg>
+              )}
             </div>
             <h1 className="text-[18px] font-bold text-gray-900 mb-1">
               {payloadTampered ? 'Tamper Detected — Cryptographic Signature Mismatch' : 'Unverified Certificate Reference'}
