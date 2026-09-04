@@ -107,11 +107,7 @@ const ROLE_LABELS: Record<string, string> = {
   viewer: 'Viewer',
 };
 
-const LAB_OPTIONS = [
-  { label: 'Central Metrology Testing Lab (CMTL-PY-01)', value: 'CMTL-PY-01' },
-  { label: 'Prayagraj Instrument Testing Lab (PITL-PR-02)', value: 'PITL-PR-02' },
-  { label: 'North Zone Calibration Laboratory (NZCL-DL-03)', value: 'NZCL-DL-03' },
-];
+const LAB_OPTIONS: { label: string; value: string }[] = [];
 
 type ModalMode = 'add' | 'edit';
 
@@ -123,14 +119,20 @@ export default function AdminUsersPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<ModalMode>('add');
   const [editingUser, setEditingUser] = useState<UserRecord | null>(null);
-  const [formData, setFormData] = useState({ fullName: '', email: '', role: 'viewer', laboratory: 'CMTL-PY-01' });
+  const [formData, setFormData] = useState({ fullName: '', email: '', role: 'viewer', laboratory: '' });
   const [formError, setFormError] = useState<string | null>(null);
   const [actionMessage, setActionMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [labOptions, setLabOptions] = useState<{ label: string; value: string }[]>(LAB_OPTIONS);
 
   useEffect(() => {
     supabaseDb.getUsers().then(dbUsers => {
       if (dbUsers && dbUsers.length > 0) {
         setUsers(dbUsers);
+      }
+    });
+    supabaseDb.getLaboratories().then(labs => {
+      if (labs && labs.length > 0) {
+        setLabOptions(labs.map(l => ({ label: `${l.name} (${l.code})`, value: l.code })));
       }
     });
   }, []);
@@ -143,7 +145,7 @@ export default function AdminUsersPage() {
   const openAddModal = () => {
     setModalMode('add');
     setEditingUser(null);
-    setFormData({ fullName: '', email: '', role: 'viewer', laboratory: 'CMTL-PY-01' });
+    setFormData({ fullName: '', email: '', role: 'viewer', laboratory: '' });
     setFormError(null);
     setModalOpen(true);
   };
@@ -167,8 +169,6 @@ export default function AdminUsersPage() {
     }
 
     if (modalMode === 'add') {
-      const tempPassword = `Nawi#${Math.floor(1000 + Math.random() * 9000)}@Lab`;
-
       const created = await supabaseDb.createUser({
         email: formData.email.trim(),
         fullName: formData.fullName.trim(),
@@ -178,7 +178,7 @@ export default function AdminUsersPage() {
       });
 
       if (created) {
-        setUsers(prev => [created, ...prev]);
+        setUsers(prev => [created, ...prev.filter(u => u.id !== created.id)]);
 
         // Dispatch welcome email via Gmail SMTP
         fetch('/api/auth/welcome-user', {
@@ -189,13 +189,13 @@ export default function AdminUsersPage() {
             fullName: created.fullName,
             role: created.role,
             laboratory: created.laboratory,
-            password: tempPassword,
+            password: created.password,
           }),
         }).catch(err => console.warn('[AdminUsers] Email send error:', err));
 
         setActionMessage({
           type: 'success',
-          text: `User "${created.fullName}" saved to Supabase & login credentials emailed to ${created.email} (Password: ${tempPassword}).`,
+          text: `User "${created.fullName}" created & can now log in. Password: ${created.password}`,
         });
       }
     } else if (editingUser) {
@@ -387,7 +387,10 @@ export default function AdminUsersPage() {
               label="Laboratory"
               value={formData.laboratory}
               onChange={e => setFormData({ ...formData, laboratory: e.target.value })}
-              options={LAB_OPTIONS}
+              options={[
+                { label: 'Select laboratory…', value: '' },
+                ...labOptions,
+              ]}
             />
             <div className="flex items-center justify-end gap-2 pt-2">
               <Button variant="secondary" size="md" onClick={() => setModalOpen(false)}>

@@ -55,11 +55,15 @@ export function DocaPortalModal({ open, onClose, test, report }: DocaPortalModal
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-gray-950/65 backdrop-blur-xs overflow-y-auto">
       <div className="relative w-full max-w-2xl bg-white rounded-md shadow-2xl border border-gray-200 overflow-hidden my-auto flex flex-col">
         {/* National Portal Header */}
-        <div className="flex items-center justify-between px-5 py-3.5 bg-gradient-to-r from-[#1e3a5f] to-[#0f243e] text-white">
+        <div className="flex items-center justify-between px-5 py-3.5 bg-[#1e3a5f] text-white">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-amber-300 font-bold text-xs">
-              🏛️
-            </div>
+<div className="w-8 h-8 rounded bg-amber-500/20 border border-amber-400/40 flex items-center justify-center">
+                <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-amber-300">
+                  <path d="M8 1.5l6.5 11H1.5z" />
+                  <path d="M8 6v3.5" />
+                  <circle cx="8" cy="11.5" r="0.4" fill="currentColor" />
+                </svg>
+              </div>
             <div>
               <div className="text-[13px] font-bold tracking-tight flex items-center gap-1.5">
                 <span>e-Maap National Portal Integration</span>

@@ -74,16 +74,16 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
   return (
     <div className="fixed inset-0 z-50 lg:hidden">
       <div className="absolute inset-0 bg-black/30" onClick={onClose} />
-      <aside className="absolute left-0 top-0 bottom-0 w-[260px] bg-gray-800 text-gray-300 flex flex-col overflow-hidden" role="navigation" aria-label="Mobile navigation">
+      <aside className="absolute left-0 top-0 bottom-0 w-[260px] bg-brand-900 text-gray-300 flex flex-col overflow-hidden" role="navigation" aria-label="Mobile navigation">
         {/* Header */}
-        <div className="flex items-center justify-between px-3 h-[56px] border-b border-gray-700 shrink-0">
+        <div className="flex items-center justify-between px-3 h-[52px] border-b border-white/[0.06] shrink-0">
           <div className="flex items-center gap-2">
-            <div className="w-[28px] h-[28px] bg-[#1e3a5f] rounded-sm flex items-center justify-center">
+            <div className="w-[30px] h-[30px] bg-brand-600 rounded-sm flex items-center justify-center ring-1 ring-inset ring-white/[0.12]">
               <span className="text-white text-[11px] font-bold">NW</span>
             </div>
             <div className="flex flex-col leading-none">
-              <span className="text-[13px] font-semibold text-gray-100">NAWI TestFlow</span>
-              <span className="text-[10px] text-gray-400">OIML R-76</span>
+              <span className="text-[13px] font-semibold text-white tracking-tight">NAWI TestFlow</span>
+              <span className="text-[10px] text-gray-400">OIML R-76 Suite</span>
             </div>
           </div>
           <button onClick={onClose} className="p-1 text-gray-400 hover:text-white" aria-label="Close menu">
@@ -94,7 +94,7 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
         </div>
 
         {/* Nav items */}
-        <nav className="flex-1 overflow-y-auto py-1 px-1">
+        <nav className="flex-1 overflow-y-auto py-3 px-2">
           {navItems.map(item => {
             const isDashboard = item.label === 'Dashboard';
             const isActive = isDashboard ? pathname === dashboardHref : pathname.startsWith(item.href);
@@ -106,11 +106,11 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
                 className={cn(
                   'flex items-center gap-2.5 px-2.5 py-2 rounded-sm text-[13px] font-medium transition-colors',
                   isActive
-                    ? 'bg-gray-900 text-white border-l-[3px] border-blue-400 -ml-[1px]'
-                    : 'text-gray-400 hover:bg-gray-700/50 hover:text-gray-200 border-l-[3px] border-transparent -ml-[1px]',
+                    ? 'bg-brand-700 text-white shadow-xs'
+                    : 'text-gray-400 hover:bg-white/[0.05] hover:text-gray-100',
                 )}
               >
-                <span className="shrink-0">{item.icon}</span>
+                <span className={cn('shrink-0', isActive ? 'text-brand-200' : 'text-gray-500')}>{item.icon}</span>
                 <span className="flex-1 truncate">{item.label}</span>
               </Link>
             );
@@ -118,19 +118,19 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
         </nav>
 
         {/* User + logout */}
-        <div className="border-t border-gray-700 px-3 py-3 shrink-0">
+        <div className="border-t border-white/[0.06] px-3 py-3 shrink-0">
           <div className="flex items-center gap-2 mb-3">
-            <div className="w-[28px] h-[28px] bg-gray-600 rounded-sm flex items-center justify-center text-[11px] font-medium text-gray-200 shrink-0">
+            <div className="w-[30px] h-[30px] bg-brand-600 rounded-sm flex items-center justify-center text-[11px] font-semibold text-white ring-1 ring-inset ring-white/[0.12] shrink-0">
               {getInitials(displayName)}
             </div>
             <div className="min-w-0">
-              <p className="text-[12px] font-medium text-gray-200 truncate">{displayName}</p>
+              <p className="text-[12px] font-medium text-gray-100 truncate">{displayName}</p>
               <p className="text-[10px] text-gray-400">{userRole ? getRoleDisplayName(userRole) : ''}</p>
             </div>
           </div>
           <button
             onClick={() => { onClose(); logout(); }}
-            className="w-full flex items-center justify-center gap-1.5 px-2 py-1.5 text-[12px] text-gray-400 hover:text-gray-200 hover:bg-gray-700 rounded-sm transition-colors"
+            className="w-full flex items-center justify-center gap-1.5 px-2 py-1.5 text-[12px] text-gray-400 hover:text-gray-100 hover:bg-white/[0.05] rounded-sm transition-colors"
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M5 2H3a1 1 0 00-1 1v8a1 1 0 001 1h2" /><path d="M9 10l3-3-3-3" /><path d="M5 7h7" />

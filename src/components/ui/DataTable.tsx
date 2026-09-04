@@ -145,7 +145,7 @@ export function DataTable<T>({
           {caption && <caption className="sr-only">{caption}</caption>}
 
           <thead>
-            <tr className="border-b border-gray-200 bg-gray-50">
+            <tr className="border-b border-gray-200 bg-gray-100/70">
               {selectable && (
                 <th className="w-[40px] px-2 py-2 text-center">
                   <input
@@ -153,7 +153,7 @@ export function DataTable<T>({
                     checked={allSelected}
                     ref={(el) => { if (el) el.indeterminate = someSelected; }}
                     onChange={handleSelectAll}
-                    className="w-3.5 h-3.5 rounded border-gray-300 accent-primary-600"
+                    className="w-3.5 h-3.5 rounded border-gray-300 accent-brand-600"
                     aria-label="Select all rows"
                   />
                 </th>
@@ -162,10 +162,10 @@ export function DataTable<T>({
                 <th
                   key={col.key}
                   className={cn(
-                    'px-2.5 py-2 text-left font-semibold text-gray-700',
-                    'text-[12px] uppercase tracking-wide',
+                    'px-2.5 py-2 text-left',
+                    'text-[11px] font-semibold text-gray-500 uppercase tracking-wider',
                     'border-b border-gray-200',
-                    col.sortable && 'cursor-pointer hover:text-gray-900 select-none',
+                    col.sortable && 'cursor-pointer hover:text-gray-800 select-none',
                     col.align === 'center' && 'text-center',
                     col.align === 'right' && 'text-right',
                   )}
@@ -178,15 +178,13 @@ export function DataTable<T>({
                       : col.sortable ? 'none' : undefined
                   }
                 >
-                  <span className="flex items-center gap-1">
+                  <span className="inline-flex items-center gap-1">
                     {col.header}
                     {col.sortable && (
-                      <span className="text-gray-400">
-                        {sort?.key === col.key
-                          ? sort.direction === 'asc' ? '↑' : '↓'
-                          : <span className="text-gray-300">↕</span>
-                        }
-                      </span>
+                      <SortIndicator
+                        active={sort?.key === col.key}
+                        direction={sort?.key === col.key ? sort.direction : undefined}
+                      />
                     )}
                   </span>
                 </th>
@@ -204,9 +202,10 @@ export function DataTable<T>({
                   key={key}
                   className={cn(
                     'border-b border-gray-100',
-                    'hover:bg-gray-50 transition-colors duration-75',
+                    'even:bg-gray-50/40 hover:bg-gray-100/60',
+                    'transition-colors duration-75',
                     onRowClick && 'cursor-pointer',
-                    isSelected && 'bg-primary-50/50',
+                    isSelected && 'bg-brand-50',
                     getComplianceClass(row),
                   )}
                   onClick={() => onRowClick?.(row)}
@@ -254,31 +253,34 @@ export function DataTable<T>({
       </div>
 
       {pagination && (
-        <div className="flex items-center justify-between px-3 py-2 border-t border-gray-200 bg-gray-50 text-[12px] text-gray-500">
-          <span>
+        <div className="flex items-center justify-between px-3 py-2 border-t border-gray-200 bg-gray-50/60 text-[12px] text-gray-500">
+          <span className="tracking-tight">
             {pagination.total === 0
               ? 'No records'
-              : `${(pagination.page - 1) * pagination.pageSize + 1}–${Math.min(pagination.page * pagination.pageSize, pagination.total)} of ${pagination.total}`
-            }
+              : `Showing ${(pagination.page - 1) * pagination.pageSize + 1}–${Math.min(pagination.page * pagination.pageSize, pagination.total)} of ${pagination.total}`}
           </span>
-          <div className="flex items-center gap-1">
-            <PaginationButton
-              onClick={() => onPageChange?.(pagination.page - 1)}
-              disabled={pagination.page <= 1}
-              label="Previous page"
-            >
-              ← Prev
-            </PaginationButton>
-            <span className="px-2 text-gray-600 font-medium">
+          <div className="flex items-center gap-1.5">
+            <span className="px-1 text-gray-600 font-medium">
               Page {pagination.page} of {Math.ceil(pagination.total / pagination.pageSize) || 1}
             </span>
-            <PaginationButton
-              onClick={() => onPageChange?.(pagination.page + 1)}
-              disabled={pagination.page >= Math.ceil(pagination.total / pagination.pageSize)}
-              label="Next page"
-            >
-              Next →
-            </PaginationButton>
+            <div className="flex items-center gap-1">
+              <PaginationButton
+                onClick={() => onPageChange?.(pagination.page - 1)}
+                disabled={pagination.page <= 1}
+                label="Previous page"
+                direction="prev"
+              >
+                Prev
+              </PaginationButton>
+              <PaginationButton
+                onClick={() => onPageChange?.(pagination.page + 1)}
+                disabled={pagination.page >= Math.ceil(pagination.total / pagination.pageSize)}
+                label="Next page"
+                direction="next"
+              >
+                Next
+              </PaginationButton>
+            </div>
           </div>
         </div>
       )}
@@ -287,30 +289,84 @@ export function DataTable<T>({
 }
 
 // ═══════════════════════════════════════════════════════════════
+// SORT INDICATOR
+// ═══════════════════════════════════════════════════════════════
+
+function SortIndicator({
+  active,
+  direction,
+}: {
+  active: boolean;
+  direction?: SortState['direction'];
+}) {
+  return (
+    <span className={cn('inline-flex flex-col leading-none', active ? 'text-brand-600' : 'text-gray-300')}>
+      <svg
+        width="8"
+        height="8"
+        viewBox="0 0 8 8"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className={cn(active && direction === 'asc' ? 'text-brand-700' : '')}
+      >
+        <path d="M1 5.5L4 2.5l3 3" />
+      </svg>
+      <svg
+        width="8"
+        height="8"
+        viewBox="0 0 8 8"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className={cn('-mt-[3px]', active && direction === 'desc' ? 'text-brand-700' : '')}
+      >
+        <path d="M1 2.5L4 5.5l3-3" />
+      </svg>
+    </span>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
 // PAGINATION BUTTON
 // ═══════════════════════════════════════════════════════════════
 
 function PaginationButton({
-  onClick, disabled, label, children,
+  onClick, disabled, label, children, direction,
 }: {
   onClick: () => void;
   disabled: boolean;
   label: string;
   children: React.ReactNode;
+  direction: 'prev' | 'next';
 }) {
   return (
     <button
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        'px-2 py-0.5 rounded text-[12px] font-medium',
-        'border border-gray-200 bg-white',
-        'hover:bg-gray-100 disabled:opacity-40 disabled:pointer-events-none',
+        'inline-flex items-center gap-1 px-2 py-0.5 rounded-sm text-[12px] font-medium',
+        'border border-gray-200 bg-white shadow-xs',
+        'hover:bg-gray-100 hover:border-gray-300 disabled:opacity-40 disabled:pointer-events-none',
         'transition-colors duration-75',
       )}
       aria-label={label}
     >
+      {direction === 'prev' && (
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M6.5 1.5L3 5l3.5 3.5" />
+        </svg>
+      )}
       {children}
+      {direction === 'next' && (
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3.5 1.5L7 5l-3.5 3.5" />
+        </svg>
+      )}
     </button>
   );
 }

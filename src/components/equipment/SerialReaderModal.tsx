@@ -93,8 +93,13 @@ export function SerialReaderModal({
 
           {/* Browser compatibility banner if not supported */}
           {!isSupported && (
-            <div className="p-3 bg-amber-50 border border-amber-300 rounded-sm text-amber-800 text-[12px]">
-              ⚠️ <strong>Web Serial API not supported by this browser.</strong> Physical COM ports require Google Chrome, MS Edge, or Brave. You can still use <strong>Simulation Mode</strong> below for testing.
+            <div className="p-3 bg-amber-50 border border-amber-300 rounded-sm text-amber-800 text-[12px] flex items-start gap-1.5">
+              <svg width="13" height="13" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 mt-0.5">
+                <path d="M9 2l7 13H2z" />
+                <path d="M9 7v3.5" />
+                <circle cx="9" cy="13" r="0.5" fill="currentColor" />
+              </svg>
+              <span><strong>Web Serial API not supported by this browser.</strong> Physical COM ports require Google Chrome, MS Edge, or Brave. You can still use <strong>Simulation Mode</strong> below for testing.</span>
             </div>
           )}
 

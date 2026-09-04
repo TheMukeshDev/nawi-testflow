@@ -10,9 +10,10 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
+import { ROLE_DASHBOARD_PATHS } from '@/lib/auth';
 
 export default function LoginPage() {
-  const { login, getRoleRedirectPath } = useAuth();
+  const { login } = useAuth();
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -21,11 +22,15 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
     setError('');
     setIsSubmitting(true);
     try {
-      await login(email, password);
-      router.push(getRoleRedirectPath());
+      const loggedIn = await login(email, password);
+      if (loggedIn) {
+        const path = ROLE_DASHBOARD_PATHS[loggedIn.role];
+        router.replace(path || '/viewer');
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'An unexpected error occurred';
       if (msg.includes('Invalid login credentials')) {
@@ -58,11 +63,16 @@ export default function LoginPage() {
 
       <main className="flex-1 flex items-center justify-center px-4 py-8">
         <div className="w-full max-w-[400px]">
-          <div className="bg-white border border-gray-200 rounded-sm p-6">
-            <h1 className="text-[18px] font-semibold text-gray-900 mb-1">Sign In</h1>
-            <p className="text-[13px] text-gray-600 mb-6">
-              Enter your credentials to access the system.
-            </p>
+          <div className="bg-white border border-gray-200 rounded-sm shadow-sm p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-[30px] h-[30px] bg-[#1e3a5f] rounded-sm flex items-center justify-center">
+                <span className="text-white text-[11px] font-bold">NW</span>
+              </div>
+              <div>
+                <h1 className="text-[18px] font-semibold text-gray-900 leading-tight">Sign In</h1>
+                <p className="text-[12px] text-gray-500">NAWI TestFlow — OIML R-76</p>
+              </div>
+            </div>
 
             {error && (
               <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-sm text-[13px] text-red-700" role="alert">
@@ -121,7 +131,10 @@ export default function LoginPage() {
 
           {/* Demo credentials */}
           <div className="mt-4 bg-blue-50 border border-blue-100 rounded-sm p-4">
-            <p className="text-[11px] font-semibold text-[#1e3a5f] mb-2">Demo Accounts</p>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[11px] font-semibold text-[#1e3a5f]">Demo Accounts</p>
+              <span className="px-1.5 py-0.5 text-[9px] font-bold text-blue-700 bg-blue-100 border border-blue-200 rounded">ONE-CLICK FILL</span>
+            </div>
             <div className="space-y-1.5">
               {[
                 { role: 'Admin', email: 'admin@nawi-demo.local', pw: 'Admin@123' },
@@ -133,14 +146,21 @@ export default function LoginPage() {
                   key={d.email}
                   type="button"
                   onClick={() => { setEmail(d.email); setPassword(d.pw); setError(''); }}
-                  className="w-full flex items-center justify-between px-2.5 py-1.5 bg-white border border-blue-100 rounded-sm text-left hover:border-blue-300 transition-colors"
+                  className="group w-full flex items-center justify-between px-2.5 py-1.5 bg-white border border-blue-100 rounded-sm text-left hover:border-blue-300 hover:shadow-xs transition-all cursor-pointer"
                 >
-                  <span className="text-[11px] font-medium text-gray-700">{d.role}</span>
+                  <span className="flex items-center gap-2">
+                    <span className="flex items-center justify-center w-[20px] h-[20px] bg-blue-50 border border-blue-100 text-[10px] font-bold text-[#1e3a5f] rounded group-hover:bg-blue-100 transition-colors">
+                      {d.role[0]}
+                    </span>
+                    <span className="text-[11px] font-medium text-gray-700">{d.role}</span>
+                  </span>
                   <span className="text-[10px] font-mono text-gray-500">{d.email}</span>
                 </button>
               ))}
             </div>
-            <p className="text-[10px] text-gray-400 mt-2">Click to auto-fill. DEMO ONLY.</p>
+            <p className="text-[10px] text-gray-400 mt-2">
+              Click a role to auto-fill credentials. DEMO ONLY — passwords are prefilled.
+            </p>
           </div>
 
           <p className="text-center text-[11px] text-gray-400 mt-4">

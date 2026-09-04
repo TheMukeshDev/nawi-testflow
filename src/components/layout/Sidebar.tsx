@@ -1,10 +1,10 @@
 /**
- * NAWI TestFlow — Sidebar Component v3
+ * NAWI TestFlow — Sidebar Component v4
  *
  * Role-based persistent left navigation. Desktop-primary, always visible.
  *
- * Navigation is filtered based on user role from auth context.
- * Sidebar color uses gray-800 for a professional laboratory feel.
+ * Navigation is grouped into sections and filtered by user role.
+ * Deep-navy shell (brand) for a professional laboratory/regulatory feel.
  */
 
 'use client';
@@ -21,8 +21,16 @@ interface NavItem {
   href: string;
   icon: React.ReactNode;
   requiredRoles: string[];
+  section: 'overview' | 'records' | 'master' | 'system';
   badge?: number;
 }
+
+const NAV_SECTIONS: { id: NavItem['section']; label: string }[] = [
+  { id: 'overview', label: 'Overview' },
+  { id: 'records', label: 'Test Center' },
+  { id: 'master', label: 'Master Data' },
+  { id: 'system', label: 'System' },
+];
 
 /** Simple SVG icons — 18px, stroke-based, no fill */
 const icons = {
@@ -99,16 +107,16 @@ const icons = {
 
 /** Navigation items with role requirements */
 const ALL_NAV_ITEMS: NavItem[] = [
-  { label: 'Dashboard', href: '/', icon: icons.dashboard, requiredRoles: ['admin', 'tester', 'reviewer', 'viewer'] },
-  { label: 'Test Reports', href: '/tests', icon: icons.testReports, requiredRoles: ['admin', 'tester', 'reviewer', 'viewer'] },
-  { label: 'New Test', href: '/tests/new', icon: icons.newTest, requiredRoles: ['admin', 'tester'] },
-  { label: 'Instruments', href: '/instruments', icon: icons.instruments, requiredRoles: ['admin', 'tester', 'reviewer', 'viewer'] },
-  { label: 'Laboratory', href: '/laboratories', icon: icons.laboratory, requiredRoles: ['admin', 'tester', 'reviewer', 'viewer'] },
-  { label: 'Equipment', href: '/equipment', icon: icons.equipment, requiredRoles: ['admin', 'tester', 'reviewer', 'viewer'] },
-  { label: 'Repository', href: '/repository', icon: icons.repository, requiredRoles: ['admin', 'tester', 'reviewer', 'viewer'] },
-  { label: 'Users', href: '/admin/users', icon: icons.users, requiredRoles: ['admin'] },
-  { label: 'Audit Log', href: '/admin/audit', icon: icons.audit, requiredRoles: ['admin'] },
-  { label: 'Settings', href: '/admin/settings', icon: icons.settings, requiredRoles: ['admin'] },
+  { label: 'Dashboard', href: '/', icon: icons.dashboard, requiredRoles: ['admin', 'tester', 'reviewer', 'viewer'], section: 'overview' },
+  { label: 'Test Reports', href: '/tests', icon: icons.testReports, requiredRoles: ['admin', 'tester', 'reviewer', 'viewer'], section: 'records' },
+  { label: 'New Test', href: '/tests/new', icon: icons.newTest, requiredRoles: ['admin', 'tester'], section: 'records' },
+  { label: 'Repository', href: '/repository', icon: icons.repository, requiredRoles: ['admin', 'tester', 'reviewer', 'viewer'], section: 'records' },
+  { label: 'Instruments', href: '/instruments', icon: icons.instruments, requiredRoles: ['admin', 'tester', 'reviewer', 'viewer'], section: 'master' },
+  { label: 'Laboratory', href: '/laboratories', icon: icons.laboratory, requiredRoles: ['admin', 'tester', 'reviewer', 'viewer'], section: 'master' },
+  { label: 'Equipment', href: '/equipment', icon: icons.equipment, requiredRoles: ['admin', 'tester', 'reviewer', 'viewer'], section: 'master' },
+  { label: 'Users', href: '/admin/users', icon: icons.users, requiredRoles: ['admin'], section: 'system' },
+  { label: 'Audit Log', href: '/admin/audit', icon: icons.audit, requiredRoles: ['admin'], section: 'system' },
+  { label: 'Settings', href: '/admin/settings', icon: icons.settings, requiredRoles: ['admin'], section: 'system' },
 ];
 
 interface SidebarProps {
@@ -131,6 +139,14 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
     item.label === 'Dashboard' ? { ...item, href: dashboardHref } : item,
   );
 
+  // Group into sections, preserving defined order
+  const sections = NAV_SECTIONS
+    .map(section => ({
+      ...section,
+      items: navItems.filter(i => i.section === section.id),
+    }))
+    .filter(s => s.items.length > 0);
+
   // Get user initials
   const getInitials = (name: string) => {
     return name
@@ -144,20 +160,26 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
   const displayName = user?.full_name || user?.email || 'User';
   const initials = getInitials(displayName);
 
+  const isItemActive = (item: NavItem) =>
+    item.label === 'Dashboard' ? pathname === dashboardHref : pathname.startsWith(item.href);
+
   return (
     <aside
       className={cn(
-        'flex flex-col h-screen bg-gray-800 text-gray-300 select-none',
-        'border-r border-gray-700',
-        collapsed ? 'w-[56px]' : 'w-[240px]'
+        'flex flex-col h-screen bg-brand-900 text-gray-300 select-none',
+        'border-r border-brand-800',
+        collapsed ? 'w-[56px]' : 'w-[248px]'
       )}
       role="navigation"
       aria-label="Main navigation"
     >
       {/* Logo / Brand */}
-      <div className="flex items-center gap-2 px-3 h-[48px] border-b border-gray-700 shrink-0">
-        <div className="flex items-center justify-center w-[28px] h-[28px] bg-[#1e3a5f] rounded-sm">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+      <div className={cn(
+        'flex items-center gap-2.5 h-[52px] border-b border-white/[0.06] shrink-0',
+        collapsed ? 'justify-center px-2' : 'px-4',
+      )}>
+        <div className="flex items-center justify-center w-[30px] h-[30px] bg-brand-600 rounded-sm ring-1 ring-inset ring-white/[0.12] shadow-sm shrink-0">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
             <line x1="12" y1="3" x2="12" y2="21" stroke="white" strokeWidth="2" strokeLinecap="round"/>
             <line x1="5" y1="21" x2="19" y2="21" stroke="white" strokeWidth="2" strokeLinecap="round"/>
             <line x1="3" y1="8" x2="21" y2="8" stroke="white" strokeWidth="2" strokeLinecap="round"/>
@@ -168,60 +190,81 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
         </div>
         {!collapsed && (
           <div className="flex flex-col min-w-0">
-            <span className="text-[13px] font-semibold text-gray-100 leading-tight truncate">
+            <span className="text-[13px] font-semibold text-white leading-tight truncate tracking-tight">
               NAWI TestFlow
             </span>
-            <span className="text-[10px] text-gray-400 leading-tight">
-              OIML R-76
+            <span className="text-[10px] text-gray-400 leading-tight tracking-wide">
+              OIML R-76 Suite
             </span>
           </div>
         )}
       </div>
 
       {/* Navigation Items */}
-      <nav className="flex-1 overflow-y-auto py-1 px-1">
-        {navItems.map(item => {
-          const isDashboard = item.label === 'Dashboard';
-          const isActive = isDashboard
-            ? pathname === dashboardHref
-            : pathname.startsWith(item.href);
-
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                'flex items-center gap-2.5 px-2.5 py-1.5 rounded-sm text-[13px] font-medium',
-                'transition-colors duration-100',
-                isActive
-                  ? 'bg-gray-900 text-white border-l-[3px] border-blue-400 -ml-[1px]'
-                  : 'text-gray-400 hover:bg-gray-700/50 hover:text-gray-200 border-l-[3px] border-transparent -ml-[1px]',
-              )}
-            >
-              <span className="shrink-0">{item.icon}</span>
-              <span className="flex-1 truncate">{item.label}</span>
-              {item.badge !== undefined && (
-                <span className="flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-medium bg-[#1e3a5f] text-white rounded-sm">
-                  {item.badge}
-                </span>
-              )}
-            </Link>
-          );
-        })}
+      <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-4">
+        {sections.map(section => (
+          <div key={section.id}>
+            {!collapsed && (
+              <div className="px-2 pb-1.5 text-[10px] font-semibold text-gray-500 uppercase tracking-[0.12em]">
+                {section.label}
+              </div>
+            )}
+            <div className="space-y-0.5">
+              {section.items.map(item => {
+                const isActive = isItemActive(item);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    aria-current={isActive ? 'page' : undefined}
+                    className={cn(
+                      'group flex items-center gap-2.5 rounded-sm text-[13px] font-medium',
+                      'transition-colors duration-100',
+                      isActive
+                        ? 'bg-brand-700 text-white shadow-xs'
+                        : 'text-gray-400 hover:text-gray-100 hover:bg-white/[0.05]',
+                      collapsed ? 'justify-center px-0 py-2' : 'px-2.5 py-[7px]',
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        'shrink-0 transition-colors',
+                        isActive ? 'text-brand-200' : 'text-gray-500 group-hover:text-gray-300',
+                      )}
+                    >
+                      {item.icon}
+                    </span>
+                    {!collapsed && (
+                      <>
+                        <span className="flex-1 truncate">{item.label}</span>
+                        {item.badge !== undefined && (
+                          <span className="flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-semibold bg-brand-500 text-white rounded-sm">
+                            {item.badge}
+                          </span>
+                        )}
+                      </>
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
 
       {/* User Info + Logout */}
-      <div className="border-t border-gray-700 px-3 py-2 shrink-0">
-        <div className="flex items-center gap-2 mb-2">
-          <div className="flex items-center justify-center w-[28px] h-[28px] bg-gray-600 rounded-sm text-[11px] font-medium text-gray-200 shrink-0">
+      <div className="border-t border-white/[0.06] px-3 py-2.5 shrink-0">
+        <div className="flex items-center gap-2 mb-1.5">
+          <div className="flex items-center justify-center w-[30px] h-[30px] bg-brand-600 rounded-sm text-[11px] font-semibold text-white ring-1 ring-inset ring-white/[0.12] shrink-0">
             {initials}
           </div>
           {!collapsed && (
             <div className="flex flex-col min-w-0">
-              <span className="text-[12px] font-medium text-gray-200 truncate">
+              <span className="text-[12px] font-medium text-gray-100 truncate">
                 {displayName}
               </span>
-              <span className="text-[10px] text-gray-400 truncate">
+              <span className="text-[10px] text-gray-400 truncate flex items-center gap-1">
+                <span className="w-[5px] h-[5px] rounded-full bg-emerald-500 inline-block" />
                 {userRole ? getRoleDisplayName(userRole) : 'Unknown'}
               </span>
             </div>
@@ -230,7 +273,7 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
         {!collapsed && (
           <button
             onClick={logout}
-            className="w-full flex items-center justify-center gap-1.5 px-2 py-1 text-[11px] text-gray-400 hover:text-gray-200 hover:bg-gray-700 rounded-sm transition-colors"
+            className="w-full flex items-center justify-center gap-1.5 px-2 py-1.5 text-[11px] text-gray-400 hover:text-gray-100 hover:bg-white/[0.05] rounded-sm transition-colors"
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M5 2H3a1 1 0 00-1 1v8a1 1 0 001 1h2" />

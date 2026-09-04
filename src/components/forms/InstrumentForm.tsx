@@ -328,8 +328,13 @@ export function InstrumentForm({
           />
         </div>
         {duplicateWarning && (
-          <div className="mt-2 p-2 bg-warning-50 border border-warning-300 rounded-md text-[12px] text-warning-800">
-            ⚠ {duplicateWarning}
+          <div className="mt-2 p-2 bg-warning-50 border border-warning-300 rounded-md text-[12px] text-warning-800 flex items-start gap-1.5">
+            <svg width="13" height="13" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 mt-0.5">
+              <path d="M9 2l7 13H2z" />
+              <path d="M9 7v3.5" />
+              <circle cx="9" cy="13" r="0.5" fill="currentColor" />
+            </svg>
+            <span>{duplicateWarning}</span>
           </div>
         )}
         {isCheckingDuplicate && (

@@ -202,13 +202,23 @@ export default function LaboratoryDetailPage({ params }: { params: Promise<{ id:
               value={new Date(lab.accreditationValidUntil).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
             />
             {isAccreditationExpired && (
-              <div className="mt-2 p-2 bg-danger-50 border border-danger-300 rounded-md text-[12px] text-danger-700">
-                ⚠ Accreditation has expired. Please renew before conducting tests.
+              <div className="mt-2 p-2 bg-danger-50 border border-danger-300 rounded-md text-[12px] text-danger-700 flex items-center gap-1.5">
+                <svg width="13" height="13" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                  <path d="M9 2l7 13H2z" />
+                  <path d="M9 7v3.5" />
+                  <circle cx="9" cy="13" r="0.5" fill="currentColor" />
+                </svg>
+                Accreditation has expired. Please renew before conducting tests.
               </div>
             )}
             {isAccreditationExpiringSoon && !isAccreditationExpired && (
-              <div className="mt-2 p-2 bg-warning-50 border border-warning-300 rounded-md text-[12px] text-warning-700">
-                ⚠ Accreditation will expire within 90 days.
+              <div className="mt-2 p-2 bg-warning-50 border border-warning-300 rounded-md text-[12px] text-warning-700 flex items-center gap-1.5">
+                <svg width="13" height="13" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                  <path d="M9 2l7 13H2z" />
+                  <path d="M9 7v3.5" />
+                  <circle cx="9" cy="13" r="0.5" fill="currentColor" />
+                </svg>
+                Accreditation will expire within 90 days.
               </div>
             )}
           </FieldSet>

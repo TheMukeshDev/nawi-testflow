@@ -20,8 +20,9 @@ export function PageHeader({ title, subtitle, actions, children }: PageHeaderPro
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div className="min-w-0">
           <h1 className="text-page-title">{title}</h1>
+          <div className="h-[2px] w-[48px] bg-[#1e3a5f] mt-2 rounded" />
           {subtitle && (
-            <p className="text-[13px] text-gray-500 mt-0.5 leading-normal">
+            <p className="text-[13px] text-gray-500 mt-2 leading-normal">
               {subtitle}
             </p>
           )}

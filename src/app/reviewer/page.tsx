@@ -15,6 +15,8 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { RouteGuard } from '@/components/auth/RouteGuard';
 import { ComplianceBadge } from '@/components/ui/StatusBadge';
 import { SearchInput } from '@/components/ui/SearchInput';
+import { MetricCard } from '@/components/ui/MetricCard';
+import { SectionHeader } from '@/components/ui/SectionHeader';
 import { useDashboardSearch, setDashboardSearch } from '@/components/layout/DashboardSearchContext';
 import { TestResultModal } from '@/components/workflow/TestResultModal';
 import { workflowStore, type StoredTest } from '@/lib/workflow-store';
@@ -34,6 +36,8 @@ export default function ReviewerDashboard() {
 
   useEffect(() => {
     refreshData();
+    // Merge live Supabase test reports so real data appears alongside local workflow
+    workflowStore.mergeFromSupabase().then(refreshData).catch(refreshData);
     const unsubscribe = workflowStore.subscribe(() => {
       refreshData();
     });
@@ -63,12 +67,13 @@ export default function ReviewerDashboard() {
           if (test) openReviewModal(test, mode);
         }}
       >
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-5">
           <div>
             <h1 className="text-[18px] font-semibold text-gray-900">
               Metrology Review & Approval Workspace
             </h1>
-            <p className="text-[12px] text-gray-500 mt-0.5">
+            <div className="h-[2px] w-[48px] bg-[#1e3a5f] mt-2 rounded" />
+            <p className="text-[12px] text-gray-500 mt-2">
               Evaluate submitted NAWI test observations and issue official OIML R-76 certificates
             </p>
           </div>
@@ -84,27 +89,67 @@ export default function ReviewerDashboard() {
         />
 
         {/* ── Metrics ── */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-          <MetricCard label="Pending Review" value={String(pendingTests.length)} color="warning" />
-          <MetricCard label="Approved Reports" value={String(approvedTests.length)} color="success" />
-          <MetricCard label="Revision Requested" value={String(rejectedTests.length)} color="danger" />
-          <MetricCard label="Total Evaluated" value={String(approvedTests.length + rejectedTests.length)} color="gray" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 mb-6">
+          <MetricCard
+            label="Pending Review"
+            value={pendingTests.length}
+            tone="warning"
+            icon={
+              <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="10" cy="10" r="7" />
+                <path d="M10 6v4l2.5 2.5" />
+              </svg>
+            }
+          />
+          <MetricCard
+            label="Approved Reports"
+            value={approvedTests.length}
+            tone="success"
+            icon={
+              <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="10" cy="10" r="7" />
+                <path d="M6.5 10l2.5 2.5 4.5-5" />
+              </svg>
+            }
+          />
+          <MetricCard
+            label="Revision Requested"
+            value={rejectedTests.length}
+            tone="danger"
+            icon={
+              <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 6h12v10H4z" />
+                <path d="M7 4h6" />
+                <path d="M7 10h6M7 13h4" />
+              </svg>
+            }
+          />
+          <MetricCard
+            label="Total Evaluated"
+            value={approvedTests.length + rejectedTests.length}
+            tone="gray"
+            icon={
+              <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 3.5h10v13H5z" />
+                <path d="M5 7h10M5 10.5h6" />
+              </svg>
+            }
+          />
         </div>
 
         {/* ── Reports Awaiting Review ── */}
         <div className="mb-8">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <h2 className="text-[14px] font-semibold text-gray-900">
-                Reports Awaiting Review
-              </h2>
-              {pendingTests.length > 0 && (
+          <SectionHeader
+            title="Reports Awaiting Review"
+            count={visiblePending.length}
+            action={
+              pendingTests.length > 0 && (
                 <span className="px-2 py-0.5 text-[11px] font-bold bg-amber-100 text-amber-800 rounded-full border border-amber-300 animate-pulse">
                   {pendingTests.length} action required
                 </span>
-              )}
-            </div>
-          </div>
+              )
+            }
+          />
 
           <div className="bg-white border border-gray-200 rounded overflow-hidden shadow-2xs">
             {visiblePending.length === 0 ? (
@@ -195,28 +240,5 @@ export default function ReviewerDashboard() {
         />
       </DashboardLayout>
     </RouteGuard>
-  );
-}
-
-function MetricCard({ label, value, color }: { label: string; value: string; color: string }) {
-  const borderColors: Record<string, string> = {
-    gray: 'border-t-gray-400',
-    primary: 'border-t-primary-500',
-    warning: 'border-t-warning-500',
-    success: 'border-t-success-500',
-    danger: 'border-t-danger-500',
-  };
-
-  return (
-    <div className={`bg-white border border-gray-200 rounded border-t-2 ${borderColors[color]}`}>
-      <div className="px-3 py-2.5">
-        <div className="text-[11px] font-medium text-gray-500 uppercase tracking-wide mb-1">
-          {label}
-        </div>
-        <div className="text-[22px] font-bold text-gray-900 leading-none">
-          {value}
-        </div>
-      </div>
-    </div>
   );
 }
