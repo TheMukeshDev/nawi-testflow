@@ -5,6 +5,8 @@
  * with local cache fallback, ensuring data remains intact on page refreshes.
  */
 
+import { isSupabaseConfigured } from './supabase/client';
+
 export interface DbUser {
   id: string;
   email: string;
@@ -202,14 +204,32 @@ export const supabaseDb = {  /**
   },
 
   /**
-   * Fetch all users from Supabase profiles
+   * Fetch all users from Supabase profiles.
+   *
+   * The server response is merged (deduplicated by id) with the locally cached
+   * user list instead of replacing it. This guarantees a partial or incomplete
+   * server response — e.g. a `profiles` table that only holds one newly created
+   * user — can never wipe out users we already know about.
    */
   async getUsers(): Promise<DbUser[]> {
+    const cacheKey = 'nawi_cached_users_v1';
+    const readCache = (): DbUser[] => {
+      if (typeof window === 'undefined') return [];
+      try {
+        const cached = localStorage.getItem(cacheKey);
+        return cached ? JSON.parse(cached) : [];
+      } catch {
+        return [];
+      }
+    };
+    const mergeById = (...lists: DbUser[][]): DbUser[] =>
+      [...new Map(lists.flat().map(u => [u.id, u])).values()];
+
     try {
       const res = await fetch('/api/db/profiles?select=*,laboratories!fk_profiles_laboratory(code,name)&order=created_at.desc');
       if (res.ok) {
         const rows = await res.json();
-        if (Array.isArray(rows) && rows.length > 0) {
+        if (Array.isArray(rows)) {
           const mapped: DbUser[] = rows.map(r => ({
             id: r.id,
             email: r.email,
@@ -220,9 +240,11 @@ export const supabaseDb = {  /**
             lastLogin: r.last_login || new Date().toISOString(),
             createdAt: r.created_at || new Date().toISOString(),
           }));
-          // Save to local cache for instant offline render
-          localStorage.setItem('nawi_cached_users_v1', JSON.stringify(mapped));
-          return mapped;
+          // Merge with any locally known users (existing cache) instead of
+          // replacing them with the server subset.
+          const merged = mergeById(mapped, readCache());
+          try { localStorage.setItem(cacheKey, JSON.stringify(merged)); } catch {}
+          return merged;
         }
       }
     } catch (err) {
@@ -230,12 +252,8 @@ export const supabaseDb = {  /**
     }
 
     // Fallback to local cache or defaults
-    const cached = typeof window !== 'undefined' ? localStorage.getItem('nawi_cached_users_v1') : null;
-    if (cached) {
-      try {
-        return JSON.parse(cached);
-      } catch {}
-    }
+    const cached = readCache();
+    if (cached.length > 0) return cached;
 
     return [
       {
@@ -321,9 +339,15 @@ export const supabaseDb = {  /**
 
   /**
    * Add a new user — creates a real Supabase Auth account + profile + login.
+   *
+   * In a configured deployment we never fall back to a profile-only row:
+   * without a Supabase Auth account the returned password can never log in,
+   * which produces "user shows in the list but login says invalid credentials".
+   * The legacy profile-only path is kept only for demo/unconfigured builds.
    */
   async createUser(user: Omit<DbUser, 'id' | 'createdAt' | 'lastLogin'>): Promise<DbUser & { password?: string } | null> {
     // 1. Create auth user + profile + get login credentials via server-side API
+    let serverError: Error | null = null;
     try {
       const res = await fetch('/api/auth/manage-user', {
         method: 'POST',
@@ -355,15 +379,24 @@ export const supabaseDb = {  /**
         } catch {}
         return createdUser;
       } else {
-        // Fall back to legacy create (profile-only) if the manage-user route is unavailable
         const err = await res.json().catch(() => null);
-        console.warn('[supabaseDb] manage-user create failed, falling back to profile-only:', err?.error ?? err);
+        serverError = new Error(
+          (err?.error as string) || `Failed to create user (HTTP ${res.status})`,
+        );
+        console.warn('[supabaseDb] manage-user create failed:', serverError.message);
       }
     } catch (err) {
-      console.warn('[supabaseDb] manage-user create network error, falling back to profile-only:', err);
+      serverError = err instanceof Error ? err : new Error('Failed to create user (network error)');
+      console.warn('[supabaseDb] manage-user create network error:', err);
     }
 
-    // 2. Legacy fallback — create just the profile row
+    // When a real Supabase deployment is configured, a profile-only user can
+    // never log in. Surface the real error instead of silently succeeding.
+    if (serverError && isSupabaseConfigured) {
+      throw serverError;
+    }
+
+    // 2. Demo/unconfigured fallback — create just the profile row
     const newId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `usr-${Date.now()}`;
     const payload = {
       id: newId,

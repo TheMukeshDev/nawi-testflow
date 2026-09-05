@@ -127,7 +127,13 @@ export default function AdminUsersPage() {
   useEffect(() => {
     supabaseDb.getUsers().then(dbUsers => {
       if (dbUsers && dbUsers.length > 0) {
-        setUsers(dbUsers);
+        // Merge server users with the currently shown users (deduped by id)
+        // so a partial server response never removes users from the table.
+        setUsers(prev => {
+          const byId = new Map(prev.map(u => [u.id, u]));
+          dbUsers.forEach(u => byId.set(u.id, u));
+          return Array.from(byId.values());
+        });
       }
     });
     supabaseDb.getLaboratories().then(labs => {
@@ -169,33 +175,42 @@ export default function AdminUsersPage() {
     }
 
     if (modalMode === 'add') {
-      const created = await supabaseDb.createUser({
-        email: formData.email.trim(),
-        fullName: formData.fullName.trim(),
-        role: formData.role as UserRecord['role'],
-        laboratory: formData.laboratory,
-        isActive: true,
-      });
+      try {
+        const created = await supabaseDb.createUser({
+          email: formData.email.trim(),
+          fullName: formData.fullName.trim(),
+          role: formData.role as UserRecord['role'],
+          laboratory: formData.laboratory,
+          isActive: true,
+        });
 
-      if (created) {
-        setUsers(prev => [created, ...prev.filter(u => u.id !== created.id)]);
+        if (created) {
+          setUsers(prev => [created, ...prev.filter(u => u.id !== created.id)]);
 
-        // Dispatch welcome email via Gmail SMTP
-        fetch('/api/auth/welcome-user', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: created.email,
-            fullName: created.fullName,
-            role: created.role,
-            laboratory: created.laboratory,
-            password: created.password,
-          }),
-        }).catch(err => console.warn('[AdminUsers] Email send error:', err));
+          // Dispatch welcome email via Gmail SMTP
+          fetch('/api/auth/welcome-user', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email: created.email,
+              fullName: created.fullName,
+              role: created.role,
+              laboratory: created.laboratory,
+              password: created.password,
+            }),
+          }).catch(err => console.warn('[AdminUsers] Email send error:', err));
 
+          setActionMessage({
+            type: 'success',
+            text: `User "${created.fullName}" created & can now log in. Password: ${created.password}`,
+          });
+        }
+      } catch (err: any) {
+        setFormError(err?.message || 'Failed to create user. Please try again.');
+        setModalOpen(false);
         setActionMessage({
-          type: 'success',
-          text: `User "${created.fullName}" created & can now log in. Password: ${created.password}`,
+          type: 'error',
+          text: err?.message || 'Failed to create user. Please try again.',
         });
       }
     } else if (editingUser) {
