@@ -30,69 +30,6 @@ interface UserRecord {
   createdAt: string;
 }
 
-const MOCK_USERS: UserRecord[] = [
-  {
-    id: 'usr-001',
-    email: 'admin@nawi-demo.local',
-    fullName: 'Rajesh Kumar',
-    role: 'admin',
-    laboratory: 'CMTL-PY-01',
-    isActive: true,
-    lastLogin: '2026-09-02T14:00:00Z',
-    createdAt: '2025-06-01',
-  },
-  {
-    id: 'usr-002',
-    email: 'tester@nawi-demo.local',
-    fullName: 'Priya Mehta',
-    role: 'tester',
-    laboratory: 'CMTL-PY-01',
-    isActive: true,
-    lastLogin: '2026-09-02T10:30:00Z',
-    createdAt: '2025-06-15',
-  },
-  {
-    id: 'usr-003',
-    email: 'reviewer@nawi-demo.local',
-    fullName: 'Dr. Anand Kumar',
-    role: 'reviewer',
-    laboratory: 'CMTL-PY-01',
-    isActive: true,
-    lastLogin: '2026-09-01T16:00:00Z',
-    createdAt: '2025-07-01',
-  },
-  {
-    id: 'usr-004',
-    email: 'viewer@nawi-demo.local',
-    fullName: 'S. Venkatesh',
-    role: 'viewer',
-    laboratory: 'PITL-PR-02',
-    isActive: true,
-    lastLogin: '2026-08-28T09:00:00Z',
-    createdAt: '2025-08-01',
-  },
-  {
-    id: 'usr-005',
-    email: 'rajesh.nair@laboratory.example.in',
-    fullName: 'Rajesh Nair',
-    role: 'tester',
-    laboratory: 'PITL-PR-02',
-    isActive: true,
-    lastLogin: '2026-09-01T11:00:00Z',
-    createdAt: '2025-09-01',
-  },
-  {
-    id: 'usr-006',
-    email: 'suresh.iyer@laboratory.example.in',
-    fullName: 'Suresh Iyer',
-    role: 'tester',
-    laboratory: 'PITL-PR-02',
-    isActive: false,
-    lastLogin: '2026-06-15T08:00:00Z',
-    createdAt: '2025-10-01',
-  },
-];
-
 const ROLE_BADGE: Record<string, { color: 'primary' | 'success' | 'warning' | 'gray' }> = {
   admin: { color: 'primary' },
   tester: { color: 'success' },
@@ -111,8 +48,21 @@ const LAB_OPTIONS: { label: string; value: string }[] = [];
 
 type ModalMode = 'add' | 'edit';
 
+function readCachedUsers(): UserRecord[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const cached = localStorage.getItem('nawi_cached_users_v1');
+    return cached ? (JSON.parse(cached) as UserRecord[]) : [];
+  } catch {
+    return [];
+  }
+}
+
 export default function AdminUsersPage() {
-  const [users, setUsers] = useState<UserRecord[]>(MOCK_USERS);
+  // Load strictly from the database (via supabaseDb.getUsers, which falls back
+  // to a local DB snapshot and finally to one demo profile per role when the
+  // database is empty/unreachable). No extra in-memory mock list.
+  const [users, setUsers] = useState<UserRecord[]>(readCachedUsers);
   // Shared live search — bound to the TopBar header search
   const search = useDashboardSearch();
   const [roleFilter, setRoleFilter] = useState('all');
@@ -125,10 +75,8 @@ export default function AdminUsersPage() {
   const [labOptions, setLabOptions] = useState<{ label: string; value: string }[]>(LAB_OPTIONS);
 
   useEffect(() => {
-    supabaseDb.getUsers().then(dbUsers => {
-      if (dbUsers && dbUsers.length > 0) {
-        setUsers(dbUsers);
-      }
+    supabaseDb.getUsers().then(users => {
+      setUsers(users ?? []);
     });
     supabaseDb.getLaboratories().then(labs => {
       if (labs && labs.length > 0) {
@@ -197,11 +145,17 @@ export default function AdminUsersPage() {
           type: 'success',
           text: `User "${created.fullName}" created & can now log in. Password: ${created.password}`,
         });
+      } else {
+        setActionMessage({
+          type: 'error',
+          text: 'User could not be saved to the database — the account was not created. Please check the Supabase auth/service configuration and try again.',
+        });
       }
     } else if (editingUser) {
       const updated = {
         fullName: formData.fullName.trim(),
         role: formData.role as UserRecord['role'],
+        laboratory: formData.laboratory,
       };
 
       await supabaseDb.updateUser(editingUser.id, updated);
