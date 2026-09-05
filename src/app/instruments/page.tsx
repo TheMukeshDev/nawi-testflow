@@ -91,6 +91,7 @@ const COLUMNS: ColumnDef<InstrumentRecord>[] = [
     header: 'Model',
     width: 150,
     sortable: true,
+    className: 'hidden md:table-cell',
     render: (_, row) => (
       <div>
         <div className="text-[13px] font-medium text-gray-900">{row.modelName}</div>
@@ -103,6 +104,7 @@ const COLUMNS: ColumnDef<InstrumentRecord>[] = [
     header: 'Manufacturer',
     width: 140,
     sortable: true,
+    className: 'hidden lg:table-cell',
   },
   {
     key: 'instrumentClass',
@@ -125,12 +127,14 @@ const COLUMNS: ColumnDef<InstrumentRecord>[] = [
     width: 100,
     mono: true,
     align: 'right',
+    className: 'hidden sm:table-cell',
     render: (_, row) => `${row.scaleInterval} ${row.scaleIntervalUnit}`,
   },
   {
     key: 'laboratoryCode',
     header: 'Laboratory',
     width: 100,
+    className: 'hidden sm:table-cell',
   },
   {
     key: 'condition',
@@ -151,6 +155,7 @@ const COLUMNS: ColumnDef<InstrumentRecord>[] = [
     header: 'Last Cal.',
     width: 100,
     sortable: true,
+    className: 'hidden xl:table-cell',
     render: (_, row) => row.lastCalibration
       ? new Date(row.lastCalibration).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
       : '—',
@@ -160,6 +165,7 @@ const COLUMNS: ColumnDef<InstrumentRecord>[] = [
     header: 'Tests',
     width: 60,
     align: 'center',
+    className: 'hidden sm:table-cell',
   },
 ];
 
@@ -271,21 +277,21 @@ export default function InstrumentsPage() {
             placeholder="Search serial number, model, manufacturer…"
             value={searchQuery}
             onChange={(e) => { setDashboardSearch(e.target.value); setPage(1); }}
-            className="flex-1 min-w-[250px]"
+            className="w-full sm:min-w-[250px] sm:flex-1"
           />
           <Select
             label=""
             value={classFilter}
             onChange={(e) => { setClassFilter(e.target.value); setPage(1); }}
             options={CLASS_FILTERS}
-            className="w-[140px]"
+            className="w-full sm:w-[140px]"
           />
           <Select
             label=""
             value={conditionFilter}
             onChange={(e) => { setConditionFilter(e.target.value); setPage(1); }}
             options={CONDITION_FILTERS}
-            className="w-[140px]"
+            className="w-full sm:w-[140px]"
           />
         </TableFilters>
       </div>

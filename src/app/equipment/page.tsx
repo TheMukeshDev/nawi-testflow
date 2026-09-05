@@ -103,6 +103,7 @@ const COLUMNS: ColumnDef<EquipmentRecord>[] = [
     key: 'type',
     header: 'Type',
     width: 112,
+    className: 'hidden sm:table-cell',
     render: (_, row) => TYPE_LABELS[row.type] || row.type,
   },
   {
@@ -111,12 +112,14 @@ const COLUMNS: ColumnDef<EquipmentRecord>[] = [
     mono: true,
     width: 112,
     minWidth: 96,
+    className: 'hidden lg:table-cell',
   },
   {
     key: 'laboratoryCode',
     header: 'Laboratory',
     width: 96,
     minWidth: 88,
+    className: 'hidden md:table-cell',
   },
   {
     key: 'calibrationStatus',
@@ -307,21 +310,21 @@ export default function EquipmentPage() {
             placeholder="Search name, ID, serial number…"
             value={searchQuery}
             onChange={(e) => { setDashboardSearch(e.target.value); setPage(1); }}
-            className="flex-1 min-w-[200px]"
+            className="w-full sm:min-w-[200px] sm:flex-1"
           />
           <Select
             label=""
             value={typeFilter}
             onChange={(e) => { setTypeFilter(e.target.value); setPage(1); }}
             options={TYPE_FILTERS}
-            className="w-[150px]"
+            className="w-full sm:w-[150px]"
           />
           <Select
             label=""
             value={calibrationFilter}
             onChange={(e) => { setCalibrationFilter(e.target.value); setPage(1); }}
             options={CALIBRATION_FILTERS}
-            className="w-[150px]"
+            className="w-full sm:w-[150px]"
           />
         </TableFilters>
       </div>

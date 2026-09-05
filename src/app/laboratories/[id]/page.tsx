@@ -16,72 +16,32 @@ import { Badge } from '@/components/ui/Badge';
 import { FieldSet } from '@/components/ui/FormControls';
 import { DataTable, type ColumnDef } from '@/components/ui/DataTable';
 import { ConditionDot } from '@/components/ui/StatusBadge';
+import {
+  getLaboratory,
+  getInstrumentsByLaboratory,
+  getActiveTestsByLaboratory,
+  type LabRecord,
+  type LabInstrumentSummary,
+} from '@/lib/catalog-db';
 
 // ============================================================================
-// TYPES
+// COLUMN DEFINITIONS
 // ============================================================================
 
-interface LabDetail {
-  id: string;
-  name: string;
-  code: string;
-  address: string;
-  city: string;
-  state: string;
-  country: string;
-  accreditationBody: string;
-  accreditationNumber: string;
-  accreditationValidUntil: string;
-  contactPerson: string;
-  phone: string;
-  email: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface InstrumentSummary {
-  id: string;
-  serialNumber: string;
-  modelName: string;
-  manufacturer: string;
-  condition: 'good' | 'needs-repair' | 'out-of-service';
-  lastCalibration: string | null;
-}
-
-// ============================================================================
-// MOCK DATA
-// ============================================================================
-
-const MOCK_LAB: LabDetail = {
-  id: '1',
-  name: 'National Physical Laboratory — Delhi',
-  code: 'NPL-DL-01',
-  address: 'Sector 3, ceres campus, Pushp Vihar',
-  city: 'New Delhi',
-  state: 'Delhi',
-  country: 'India',
-  accreditationBody: 'NABL',
-  accreditationNumber: 'NABL-0123',
-  accreditationValidUntil: '2027-03-31',
-  contactPerson: 'Dr. K. Sharma',
-  phone: '+91-11-2670-2700',
-  email: 'npl-dl@npl.gov.in',
-  isActive: true,
-  createdAt: '2020-01-15T00:00:00Z',
-  updatedAt: '2026-09-01T00:00:00Z',
-};
-
-const MOCK_INSTRUMENTS: InstrumentSummary[] = [
-  { id: '1', serialNumber: 'WGH-2024-0891', modelName: 'Acom 3000', manufacturer: 'Acom Instruments', condition: 'good', lastCalibration: '2026-06-15' },
-  { id: '2', serialNumber: 'WGH-2024-0887', modelName: 'Kern 440', manufacturer: 'Kern & Sohn', condition: 'good', lastCalibration: '2026-07-20' },
-  { id: '3', serialNumber: 'WGH-2025-0102', modelName: 'Sartorius Quintix', manufacturer: 'Sartorius', condition: 'good', lastCalibration: '2026-08-01' },
-];
-
-const INSTRUMENT_COLUMNS: ColumnDef<InstrumentSummary>[] = [
+const INSTRUMENT_COLUMNS: ColumnDef<LabInstrumentSummary>[] = [
   { key: 'serialNumber', header: 'Serial No.', mono: true, width: 140 },
-  { key: 'modelName', header: 'Model', width: 140 },
-  { key: 'manufacturer', header: 'Manufacturer', width: 140 },
+  {
+    key: 'modelName',
+    header: 'Model',
+    width: 140,
+    render: (_, row) => (
+      <div>
+        <div className="text-[13px] font-medium text-gray-900">{row.modelName}</div>
+        <div className="text-[11px] text-gray-500">{row.modelNumber}</div>
+      </div>
+    ),
+  },
+  { key: 'manufacturer', header: 'Manufacturer', width: 140, className: 'hidden sm:table-cell' },
   {
     key: 'condition',
     header: 'Condition',
@@ -100,6 +60,7 @@ const INSTRUMENT_COLUMNS: ColumnDef<InstrumentSummary>[] = [
     key: 'lastCalibration',
     header: 'Last Cal.',
     width: 100,
+    className: 'hidden md:table-cell',
     render: (_, row) => row.lastCalibration
       ? new Date(row.lastCalibration).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
       : '—',
@@ -128,10 +89,6 @@ function DetailRow({ label, value, mono = false }: {
   );
 }
 
-function cn(...classes: (string | boolean | undefined | null)[]) {
-  return classes.filter(Boolean).join(' ');
-}
-
 // ============================================================================
 // PAGE COMPONENT
 // ============================================================================
@@ -139,13 +96,61 @@ function cn(...classes: (string | boolean | undefined | null)[]) {
 export default function LaboratoryDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const { id } = React.use(params);
-  const lab = MOCK_LAB;
-  const instruments = MOCK_INSTRUMENTS;
+  const [lab, setLab] = React.useState<LabRecord | null>(null);
+  const [instruments, setInstruments] = React.useState<LabInstrumentSummary[]>([]);
+  const [activeTests, setActiveTests] = React.useState(0);
+  const [loading, setLoading] = React.useState(true);
 
-  const isAccreditationExpired = new Date(lab.accreditationValidUntil) < new Date();
-  const isAccreditationExpiringSoon = Math.ceil(
-    (new Date(lab.accreditationValidUntil).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
-  ) <= 90;
+  React.useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    Promise.all([
+      getLaboratory(id),
+      getInstrumentsByLaboratory(id),
+      getActiveTestsByLaboratory(id),
+    ]).then(([labRow, insts, active]) => {
+      if (cancelled) return;
+      setLab(labRow);
+      setInstruments(insts);
+      setActiveTests(active);
+      setLoading(false);
+    });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
+  if (loading) {
+    return (
+      <Shell>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-[13px] text-gray-500">Loading laboratory…</div>
+        </div>
+      </Shell>
+    );
+  }
+
+  if (!lab) {
+    return (
+      <Shell breadcrumbs={[{ label: 'Laboratories', href: '/laboratories' }, { label: 'Not Found', current: true }]}>
+        <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
+          <h2 className="text-[16px] font-semibold text-gray-900 mb-2">Laboratory Not Found</h2>
+          <p className="text-[13px] text-gray-600 mb-4">
+            No laboratory matches the requested record.
+          </p>
+          <Link href="/laboratories" className="px-4 py-2 bg-primary-600 text-white rounded-md text-[13px] font-medium hover:bg-primary-700">
+            ← Back to Laboratories
+          </Link>
+        </div>
+      </Shell>
+    );
+  }
+
+  const isAccreditationExpired =
+    lab.accreditationValidUntil !== null && new Date(lab.accreditationValidUntil) < new Date();
+  const isAccreditationExpiringSoon =
+    lab.accreditationValidUntil !== null &&
+    !isAccreditationExpired &&
+    Math.ceil((new Date(lab.accreditationValidUntil).getTime() - Date.now()) / (1000 * 60 * 60 * 24)) <= 90;
 
   return (
     <Shell breadcrumbs={[
@@ -171,7 +176,7 @@ export default function LaboratoryDetailPage({ params }: { params: Promise<{ id:
             color={isAccreditationExpired ? 'danger' : isAccreditationExpiringSoon ? 'warning' : 'info'}
             variant="subtle"
           >
-            Accreditation: {lab.accreditationNumber}
+            Accreditation: {lab.accreditationNumber || '—'}
           </Badge>
           <span className="text-[12px] text-gray-500">
             {instruments.length} instrument{instruments.length !== 1 ? 's' : ''}
@@ -199,7 +204,10 @@ export default function LaboratoryDetailPage({ params }: { params: Promise<{ id:
             <DetailRow label="Accreditation Number" value={lab.accreditationNumber} mono />
             <DetailRow
               label="Valid Until"
-              value={new Date(lab.accreditationValidUntil).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+              value={lab.accreditationValidUntil
+                ? new Date(lab.accreditationValidUntil).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+                : null
+              }
             />
             {isAccreditationExpired && (
               <div className="mt-2 p-2 bg-danger-50 border border-danger-300 rounded-md text-[12px] text-danger-700 flex items-center gap-1.5">
@@ -234,7 +242,7 @@ export default function LaboratoryDetailPage({ params }: { params: Promise<{ id:
                 <div className="text-[11px] text-gray-500">Instruments</div>
               </div>
               <div className="text-center p-3 bg-gray-50 rounded-md">
-                <div className="text-[20px] font-bold text-gray-900">3</div>
+                <div className="text-[20px] font-bold text-gray-900">{activeTests}</div>
                 <div className="text-[11px] text-gray-500">Active Tests</div>
               </div>
             </div>

@@ -11,6 +11,7 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import { Shell } from '@/components/layout/Shell';
 import { PageHeader } from '@/components/layout/PageHeader';
+import { RouteGuard } from '@/components/auth/RouteGuard';
 import { Alert } from '@/components/ui/Alert';
 import {
   InstrumentForm,
@@ -20,34 +21,7 @@ import {
   type InstrumentFormData,
   type InstrumentFormErrors,
 } from '@/components/forms/InstrumentForm';
-import type { Manufacturer } from '@/types';
-
-// ============================================================================
-// MOCK DATA
-// ============================================================================
-
-const MOCK_MANUFACTURERS: Manufacturer[] = [
-  { id: '1', name: 'Acom Instruments', country: 'Germany', createdAt: '', updatedAt: '' },
-  { id: '2', name: 'Kern & Sohn', country: 'Germany', createdAt: '', updatedAt: '' },
-  { id: '3', name: 'Mettler Toledo', country: 'Switzerland', createdAt: '', updatedAt: '' },
-  { id: '4', name: 'Sartorius', country: 'Germany', createdAt: '', updatedAt: '' },
-  { id: '5', name: 'Ohaus', country: 'USA', createdAt: '', updatedAt: '' },
-  { id: '6', name: 'Adam Equipment', country: 'UK', createdAt: '', updatedAt: '' },
-  { id: '7', name: 'Shimadzu', country: 'Japan', createdAt: '', updatedAt: '' },
-];
-
-const MOCK_LABORATORIES = [
-  { id: '1', name: 'National Physical Laboratory — Delhi', code: 'NPL-DL-01' },
-  { id: '2', name: 'National Physical Laboratory — Mumbai', code: 'NPL-MH-02' },
-];
-
-const MOCK_EXISTING_SERIALS = [
-  'WGH-2024-0891',
-  'WGH-2024-0887',
-  'WGH-2024-0884',
-  'WGH-2025-0102',
-  'WGH-2025-0115',
-];
+import { getManufacturers, getLaboratoryOptions, isSerialNumberRegistered, type FormManufacturer, type FormLaboratory } from '@/lib/catalog-db';
 
 // ============================================================================
 // PAGE COMPONENT
@@ -55,19 +29,33 @@ const MOCK_EXISTING_SERIALS = [
 
 export default function NewInstrumentPage() {
   const router = useRouter();
+  const [manufacturers, setManufacturers] = React.useState<FormManufacturer[]>([]);
+  const [laboratories, setLaboratories] = React.useState<FormLaboratory[]>([]);
   const [formData, setFormData] = React.useState<InstrumentFormData>(
-    getInitialInstrumentData('1') // Default to first lab
+    getInitialInstrumentData('') // Default lab filled once laboratories load
   );
   const [errors, setErrors] = React.useState<InstrumentFormErrors>({});
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [submitError, setSubmitError] = React.useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = React.useState(false);
 
+  // Load manufacturers + laboratories
+  React.useEffect(() => {
+    let cancelled = false;
+    Promise.all([getManufacturers(), getLaboratoryOptions()]).then(([mfs, labs]) => {
+      if (cancelled) return;
+      setManufacturers(mfs);
+      setLaboratories(labs);
+      if (labs.length > 0) {
+        setFormData(current => ({ ...current, laboratoryId: labs[0].id }));
+      }
+    });
+    return () => { cancelled = true; };
+  }, []);
+
   // Check for duplicate serial number
   const checkDuplicate = async (serialNumber: string, laboratoryId: string): Promise<boolean> => {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 300));
-    return MOCK_EXISTING_SERIALS.includes(serialNumber.toUpperCase());
+    return isSerialNumberRegistered(serialNumber, laboratoryId);
   };
 
   // Handle form submission
@@ -108,11 +96,12 @@ export default function NewInstrumentPage() {
   };
 
   // Handle manufacturer selection
-  const handleManufacturerSelect = (manufacturer: Manufacturer) => {
+  const handleManufacturerSelect = (_manufacturer: { id: string; name: string; country: string }) => {
     // Could auto-fill country, etc.
   };
 
   return (
+    <RouteGuard requiredRoles={['admin', 'tester']}>
     <Shell breadcrumbs={[
       { label: 'Instruments', href: '/instruments' },
       { label: 'Register New', current: true },
@@ -148,13 +137,14 @@ export default function NewInstrumentPage() {
           onChange={setFormData}
           onSubmit={handleSubmit}
           onCancel={() => router.push('/instruments')}
-          manufacturers={MOCK_MANUFACTURERS}
-          laboratories={MOCK_LABORATORIES}
+          manufacturers={manufacturers}
+          laboratories={laboratories}
           isLoading={isSubmitting}
           onManufacturerSelect={handleManufacturerSelect}
           onCheckDuplicate={checkDuplicate}
         />
       </div>
     </Shell>
+    </RouteGuard>
   );
 }

@@ -19,56 +19,48 @@ import {
   type InstrumentFormData,
   type InstrumentFormErrors,
 } from '@/components/forms/InstrumentForm';
-import type { Manufacturer, InstrumentClass, MassUnit } from '@/types';
+import type { InstrumentClass, MassUnit } from '@/types';
+import {
+  getInstrument,
+  getManufacturers,
+  getLaboratoryOptions,
+  type FormManufacturer,
+  type FormLaboratory,
+} from '@/lib/catalog-db';
 
-// ============================================================================
-// MOCK DATA
-// ============================================================================
-
-const MOCK_MANUFACTURERS: Manufacturer[] = [
-  { id: '1', name: 'Acom Instruments', country: 'Germany', createdAt: '', updatedAt: '' },
-  { id: '2', name: 'Kern & Sohn', country: 'Germany', createdAt: '', updatedAt: '' },
-  { id: '3', name: 'Mettler Toledo', country: 'Switzerland', createdAt: '', updatedAt: '' },
-  { id: '4', name: 'Sartorius', country: 'Germany', createdAt: '', updatedAt: '' },
-  { id: '5', name: 'Ohaus', country: 'USA', createdAt: '', updatedAt: '' },
-];
-
-const MOCK_LABORATORIES = [
-  { id: '1', name: 'National Physical Laboratory — Delhi', code: 'NPL-DL-01' },
-  { id: '2', name: 'National Physical Laboratory — Mumbai', code: 'NPL-MH-02' },
-];
-
-// Mock instrument data to pre-fill form
-const MOCK_INSTRUMENT_DATA: InstrumentFormData = {
-  manufacturerId: '1',
-  manufacturerName: 'Acom Instruments',
-  modelId: '1',
-  modelName: 'Acom 3000',
-  modelNumber: 'AC-3000',
-  serialNumber: 'WGH-2024-0891',
-  assetTag: 'NPL-DL-INST-001',
-  instrumentType: 'electronic',
-  instrumentClass: 'III',
-  accuracyClass: 'M2',
-  maxCapacity: 3000,
-  maxCapacityUnit: 'kg',
-  minCapacity: 10,
-  minCapacityUnit: 'kg',
-  scaleInterval: 1,
-  scaleIntervalUnit: 'kg',
-  verificationScaleInterval: 1,
-  verificationScaleIntervalUnit: 'kg',
-  numberOfVerificationIntervals: 3000,
-  softwareVersion: 'v2.1.0',
-  firmwareVersion: 'v1.0.3',
-  powerSupply: '230V AC',
-  laboratoryId: '1',
-  dateReceived: '2024-01-15',
-  lastCalibration: '2026-06-15',
-  nextCalibration: '2027-06-15',
-  condition: 'good',
-  notes: 'Primary instrument for Class III verification testing. Located in Testing Lab A.',
-};
+function toFormData(instrument: Awaited<ReturnType<typeof getInstrument>>): InstrumentFormData | null {
+  if (!instrument) return null;
+  return {
+    manufacturerId: instrument.modelNumber ? '' : '',
+    manufacturerName: instrument.manufacturerName,
+    modelId: '',
+    modelName: instrument.modelName,
+    modelNumber: instrument.modelNumber,
+    serialNumber: instrument.serialNumber,
+    assetTag: instrument.assetTag,
+    instrumentType: instrument.instrumentType as InstrumentFormData['instrumentType'],
+    instrumentClass: instrument.instrumentClass || 'III',
+    accuracyClass: instrument.accuracyClass || '',
+    maxCapacity: instrument.maxCapacity,
+    maxCapacityUnit: instrument.maxCapacityUnit as MassUnit,
+    minCapacity: instrument.minCapacity,
+    minCapacityUnit: instrument.minCapacityUnit as MassUnit,
+    scaleInterval: instrument.scaleInterval,
+    scaleIntervalUnit: instrument.scaleIntervalUnit as MassUnit,
+    verificationScaleInterval: instrument.verificationScaleInterval ?? undefined,
+    verificationScaleIntervalUnit: (instrument.verificationScaleIntervalUnit ?? undefined) as MassUnit | undefined,
+    numberOfVerificationIntervals: instrument.numberOfVerificationIntervals ?? undefined,
+    softwareVersion: instrument.softwareVersion || '',
+    firmwareVersion: instrument.firmwareVersion || '',
+    powerSupply: instrument.powerSupply || '',
+    laboratoryId: instrument.laboratoryId,
+    dateReceived: instrument.dateReceived || '',
+    lastCalibration: instrument.lastCalibration ?? undefined,
+    nextCalibration: instrument.nextCalibration ?? undefined,
+    condition: instrument.condition as InstrumentFormData['condition'],
+    notes: instrument.notes || '',
+  };
+}
 
 // ============================================================================
 // PAGE COMPONENT
@@ -77,14 +69,29 @@ const MOCK_INSTRUMENT_DATA: InstrumentFormData = {
 export default function EditInstrumentPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const { id } = React.use(params);
-  const [formData, setFormData] = React.useState<InstrumentFormData>(MOCK_INSTRUMENT_DATA);
+  const [formData, setFormData] = React.useState<InstrumentFormData | null>(null);
+  const [manufacturers, setManufacturers] = React.useState<FormManufacturer[]>([]);
+  const [laboratories, setLaboratories] = React.useState<FormLaboratory[]>([]);
   const [errors, setErrors] = React.useState<InstrumentFormErrors>({});
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [submitError, setSubmitError] = React.useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = React.useState(false);
 
+  React.useEffect(() => {
+    let cancelled = false;
+    Promise.all([getInstrument(id), getManufacturers(), getLaboratoryOptions()]).then(([inst, mfs, labs]) => {
+      if (cancelled) return;
+      setFormData(toFormData(inst));
+      setManufacturers(mfs);
+      setLaboratories(labs);
+    });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
   // Handle form submission
   const handleSubmit = async () => {
+    if (!formData) return;
     const validationErrors = validateInstrumentForm(formData);
     setErrors(validationErrors);
 
@@ -111,6 +118,16 @@ export default function EditInstrumentPage({ params }: { params: Promise<{ id: s
       setIsSubmitting(false);
     }
   };
+
+  if (!formData) {
+    return (
+      <Shell breadcrumbs={[{ label: 'Instruments', href: '/instruments' }, { label: 'Edit', current: true }]}>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-[13px] text-gray-500">Loading instrument…</div>
+        </div>
+      </Shell>
+    );
+  }
 
   return (
     <Shell breadcrumbs={[
@@ -149,8 +166,8 @@ export default function EditInstrumentPage({ params }: { params: Promise<{ id: s
           onChange={setFormData}
           onSubmit={handleSubmit}
           onCancel={() => router.push(`/instruments/${id}`)}
-          manufacturers={MOCK_MANUFACTURERS}
-          laboratories={MOCK_LABORATORIES}
+          manufacturers={manufacturers}
+          laboratories={laboratories}
           isLoading={isSubmitting}
           isEdit
         />

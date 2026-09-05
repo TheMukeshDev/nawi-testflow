@@ -204,11 +204,11 @@ interface InstrumentFormProps {
   onChange: (data: InstrumentFormData) => void;
   onSubmit: () => void;
   onCancel: () => void;
-  manufacturers: Manufacturer[];
+  manufacturers: { id: string; name: string; country: string }[];
   laboratories: { id: string; name: string; code: string }[];
   isLoading?: boolean;
   isEdit?: boolean;
-  onManufacturerSelect?: (manufacturer: Manufacturer) => void;
+  onManufacturerSelect?: (manufacturer: { id: string; name: string; country: string }) => void;
   onCheckDuplicate?: (serialNumber: string, laboratoryId: string) => Promise<boolean>;
 }
 

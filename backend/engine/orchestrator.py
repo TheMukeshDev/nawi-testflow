@@ -227,7 +227,7 @@ class CalculationEngine:
         for point in test_input.test_points:
             obs = self.normalizer.normalize_observations(point.observations, point.unit)
             stats = self.calculator.calculate_observation_statistics(obs)
-            indication = self.normalizer.from_kg(stats.mean, point.unit)
+            indication = stats.mean
 
             result = self.calculator.weighing_error(
                 indication=indication,
@@ -307,8 +307,9 @@ class CalculationEngine:
         # Get reference value
         reference_value = point.reference_value
         
-        # Calculate deviation and error
-        mean_in_unit = self.normalizer.from_kg(stats.mean, point.unit)
+        # Calculate deviation and error (statistics are already in the test
+        # point unit; scale_interval/reference use the same unit)
+        mean_in_unit = stats.mean
         deviation = self.calculator.deviation_from_reference(mean_in_unit, reference_value)
         abs_error = self.calculator.absolute_error(mean_in_unit, reference_value)
         
@@ -524,7 +525,7 @@ class CalculationEngine:
             point_means.append({
                 "label": point.point_label,
                 "reference": point.reference_value,
-                "measured": self.normalizer.from_kg(stats.mean, point.unit),
+                "measured": stats.mean,
             })
         
         # Calculate linearity error

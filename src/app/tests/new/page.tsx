@@ -11,6 +11,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import Link from 'next/link';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { RouteGuard } from '@/components/auth/RouteGuard';
 import { useAuth } from '@/lib/auth-context';
 import { AiAssistBox } from '@/components/ai/AiAssistBox';
 import { localExplain } from '@/lib/ai';
@@ -19,6 +20,16 @@ import { workflowStore, type StoredTest } from '@/lib/workflow-store';
 import { TestResultModal } from '@/components/workflow/TestResultModal';
 import { downloadTestReportPDF, downloadTestReportDOCX } from '@/lib/report-generator';
 import { SerialReaderModal } from '@/components/equipment/SerialReaderModal';
+import {
+  calculateObservation,
+  evaluateCompliance,
+  convertToUnit,
+  type CalculationOutput,
+  type ComplianceOutput,
+  type InstrumentSpec,
+} from '@/lib/calculation-engine';
+import { persistTestRun } from '@/lib/test-persistence';
+import type { InstrumentClass } from '@/lib/rule-engine';
 
 // ═══════════════════════════════════════════════════════════════
 // TYPES
@@ -53,10 +64,25 @@ interface ObservationEntry {
   id: string;
   testName: string;
   testCode: string;
+  nominalLoad: string;
   measuredValues: string[];
   unit: string;
   notes: string;
 }
+
+type CalcRow = {
+  test: string;
+  unit: string;
+  load: string;
+  mean: string;
+  stddev: string;
+  error: string;
+  mpe: string;
+  result: 'PASS' | 'FAIL' | 'NOT_CONFIGURED';
+  standardVersion: string;
+  note?: string;
+  limitLabel?: string;
+};
 
 interface TestSelection {
   code: string;
@@ -111,9 +137,9 @@ const SAMPLE_CONDITIONS: ConditionData = {
 };
 
 const SAMPLE_OBSERVATIONS: ObservationEntry[] = [
-  { id: 'sample-rpt-max', testName: 'Repeatability', testCode: 'RPT', measuredValues: ['3000.002', '3000.001', '3000.003', '3000.002', '3000.001'], unit: 'g', notes: 'Max capacity test point' },
-  { id: 'sample-rpt-50', testName: 'Repeatability', testCode: 'RPT', measuredValues: ['1500.001', '1500.003', '1500.002', '1500.001', '1500.002'], unit: 'g', notes: '50% capacity test point' },
-  { id: 'sample-ecc', testName: 'Eccentricity', testCode: 'ECC', measuredValues: ['3000.001', '3000.005', '3000.003', '3000.008', '3000.002'], unit: 'g', notes: 'Center, Front, Back, Left, Right' },
+  { id: 'sample-rpt-max', testName: 'Repeatability', testCode: 'RPT', nominalLoad: '3000', measuredValues: ['3000.002', '3000.001', '3000.003', '3000.002', '3000.001'], unit: 'g', notes: 'Max capacity test point' },
+  { id: 'sample-rpt-50', testName: 'Repeatability', testCode: 'RPT', nominalLoad: '1500', measuredValues: ['1500.001', '1500.003', '1500.002', '1500.001', '1500.002'], unit: 'g', notes: '50% capacity test point' },
+  { id: 'sample-ecc', testName: 'Eccentricity', testCode: 'ECC', nominalLoad: '3000', measuredValues: ['3000.001', '3000.005', '3000.003', '3000.008', '3000.002'], unit: 'g', notes: 'Center, Front, Back, Left, Right' },
 ];
 
 // ═══════════════════════════════════════════════════════════════
@@ -266,7 +292,10 @@ export default function NewTestPage() {
   const [tests, setTests] = useState<TestSelection[]>(AVAILABLE_TESTS.map(t => ({ ...t })));
   const [observations, setObservations] = useState<ObservationEntry[]>([]);
   const [showResult, setShowResult] = useState(false);
-  const [calcResult, setCalcResult] = useState<{ test: string; mean: string; stddev: string; result: string }[] | null>(null);
+  const [calcResult, setCalcResult] = useState<CalcRow[] | null>(null);
+  const [calcOutputs, setCalcOutputs] = useState<CalculationOutput[] | null>(null);
+  const [compliance, setCompliance] = useState<ComplianceOutput | null>(null);
+  const [dbSave, setDbSave] = useState<{ saved: boolean; reportNumber?: string; warnings: string[] } | null>(null);
   const [submittedTest, setSubmittedTest] = useState<StoredTest | null>(null);
   const [showResultModal, setShowResultModal] = useState(false);
   const [serialTarget, setSerialTarget] = useState<{ oi: number; vi: number; label: string } | null>(null);
@@ -326,20 +355,27 @@ export default function NewTestPage() {
     setTests(AVAILABLE_TESTS.map(t => ({ ...t })));
     setObservations([]);
     setCalcResult(null);
+    setCalcOutputs(null);
+    setCompliance(null);
+    setDbSave(null);
   };
 
-  const handleSubmitForReview = () => {
+  const handleSubmitForReview = async () => {
     const formattedObs = observations.map((obs, i) => {
-      const calc = calcResult?.[i];
+      const calc = calcOutputs?.[i];
+      const notEvaluated = calc?.verdict === 'NOT_CONFIGURED';
+      const notes = notEvaluated
+        ? `[Not evaluated — rule pending] ${obs.notes}`.trim()
+        : obs.notes;
       return {
         testName: obs.testName,
         testCode: obs.testCode,
         readings: obs.measuredValues.filter(v => v.trim() !== ''),
-        mean: calc?.mean || '0.00',
-        stddev: calc?.stddev || '0.00',
-        verdict: (calc?.result === 'FAIL' ? 'FAIL' : 'PASS') as 'PASS' | 'FAIL',
+        mean: calc ? calc.mean.toFixed(6) : '0.00',
+        stddev: calc ? calc.stddev.toFixed(6) : '0.00',
+        verdict: (calc?.verdict === 'FAIL' ? 'FAIL' : 'PASS') as 'PASS' | 'FAIL',
         unit: obs.unit,
-        notes: obs.notes,
+        notes,
       };
     });
 
@@ -366,17 +402,51 @@ export default function NewTestPage() {
       },
       observations: formattedObs,
       technicianName: user?.full_name || 'Priya Mehta',
+      complianceResult: compliance?.verdict ?? 'pending',
     });
 
     setSubmittedTest(newTest);
     // Submitted — the draft is no longer needed
     clearWizardDraft();
     setDraftSavedAt(null);
+
+    // Best-effort DB persistence (real normalised schema via /api/db proxy).
+    if (calcOutputs && calcOutputs.length > 0) {
+      const pers = await persistTestRun({
+        instrument: {
+          instrumentClass: instrument.instrumentClass || 'III',
+          model: instrument.model,
+          serialNumber: instrument.serialNumber,
+          maxCapacity: parseFloat(instrument.maxCapacity) || 0,
+          maxCapacityUnit: instrument.maxCapacityUnit,
+        },
+        conditions: {
+          temperature: conditions.temperature,
+          humidity: conditions.humidity,
+          airPressure: conditions.airPressure,
+          testLocation: conditions.testLocation,
+          testDate: conditions.testDate,
+          laboratoryName: conditions.laboratoryName,
+          notes: conditions.notes,
+        },
+        computations: calcOutputs,
+        complianceVerdict: compliance?.verdict ?? 'pending',
+        technicianName: user?.full_name || 'Priya Mehta',
+      });
+      setDbSave({
+        saved: pers.ok,
+        reportNumber: pers.reportNumber,
+        warnings: pers.warnings,
+      });
+      if (!pers.ok && pers.warnings.length > 0) {
+        console.warn('[New Test] DB persistence skipped:', pers.warnings);
+      }
+    }
   };
 
-  // Rule-based explanations (Tier 1 — no AI, computed from the actual
-  // calculation values + demo rule reference). Gemini is only used when the
-  // user clicks "Enhance with AI" inside AiAssistBox.
+  // Rule-based explanations (no AI — computed from the real engine values +
+  // the resolved rule reference). Gemini is only used when the user clicks
+  // "Enhance with AI" inside AiAssistBox.
   const explanations = useMemo(() => {
     if (!calcResult) return [];
     return calcResult.map((r) => {
@@ -385,46 +455,99 @@ export default function NewTestPage() {
       const decisionData: Record<string, unknown> = {
         test_code: code,
         test_name: r.test.replace(/\s*\(\w+\)\s*$/, ''),
-        decision: r.result.toLowerCase(),
+        decision: r.result === 'FAIL' ? 'fail' : r.result === 'PASS' ? 'pass' : 'conditional',
         reason:
-          r.result === 'PASS'
-            ? `Demo evaluation: std-dev ${r.stddev} within demo limit (mean ${r.mean}). Official evaluation uses the backend engine with versioned OIML R-76 rules.`
-            : `Demo evaluation: value exceeds demo limit (mean ${r.mean}, std-dev ${r.stddev}). See backend compliance engine for the authoritative verdict.`,
-        calculated_value: Number(r.stddev),
-        calculated_unit: 'g',
-        applicable_limit: 0.5,
-        limit_unit: 'g',
-        rule_id: `DEMO-${code}-001`,
-        rule_version: 'demo',
+          r.note ||
+          `${r.test.replace(/\s*\(\w+\)\s*$/, '')} evaluated against OIML R-76 (${r.standardVersion}).`,
+        calculated_value: parseFloat(r.stddev) || 0,
+        calculated_unit: r.unit,
+        applicable_limit: r.mpe ? parseFloat(r.mpe) : 0,
+        limit_unit: r.unit,
+        rule_id: `${code}-${r.standardVersion}`,
+        rule_version: r.standardVersion,
         standard: 'OIML R-76',
-        standard_version: 'demo',
+        standard_version: r.standardVersion,
         explanations: [],
       };
       return { decisionData, explanation: localExplain(decisionData) };
     });
   }, [calcResult]);
 
-  // Auto-calculate when reaching step 4 (Calculate)
+  // Auto-calculate when reaching step 4 (Calculate) — real OIML R-76
+  // engine (DB-backed rules when available, default tables otherwise).
   useEffect(() => {
     if (step === 4 && calculatedRef.current !== completed.length) {
+      let cancelled = false;
       calculatedRef.current = completed.length;
-      const results: { test: string; mean: string; stddev: string; result: string }[] = [];
-      observations.forEach(obs => {
-        const vals = obs.measuredValues.map(Number).filter(v => !isNaN(v));
-        if (vals.length === 0) return;
-        const mean = vals.reduce((a, b) => a + b, 0) / vals.length;
-        const variance = vals.reduce((a, b) => a + (b - mean) ** 2, 0) / vals.length;
-        const stddev = Math.sqrt(variance);
-        results.push({
-          test: `${obs.testName} (${obs.testCode})`,
-          mean: mean.toFixed(6),
-          stddev: stddev.toFixed(6),
-          result: 'PASS',
+      (async () => {
+        const spec: InstrumentSpec = {
+          instrumentClass: (instrument.instrumentClass || 'III') as InstrumentClass,
+          maxCapacity: parseFloat(instrument.maxCapacity) || 0,
+          maxCapacityUnit: instrument.maxCapacityUnit || 'g',
+          scaleInterval: parseFloat(instrument.scaleInterval) || 0,
+          scaleIntervalUnit: instrument.scaleIntervalUnit || 'g',
+          verificationScaleInterval: instrument.verificationScaleInterval
+            ? parseFloat(instrument.verificationScaleInterval) || undefined
+            : undefined,
+        };
+
+        const outputs: CalculationOutput[] = [];
+        for (const obs of observations) {
+          const unit = obs.unit || 'g';
+          const enteredLoad = parseFloat(obs.nominalLoad);
+          const nominalLoad =
+            !Number.isNaN(enteredLoad)
+              ? enteredLoad
+              : spec.maxCapacity > 0
+                ? convertToUnit(spec.maxCapacity, spec.maxCapacityUnit || unit, unit)
+                : 0;
+          const out = await calculateObservation({
+            observation: {
+              testCode: obs.testCode,
+              testName: obs.testName,
+              measuredValues: obs.measuredValues,
+              unit,
+              notes: obs.notes,
+            },
+            instrument: spec,
+            nominalLoad,
+          });
+          outputs.push(out);
+        }
+
+        const comp = await evaluateCompliance({
+          results: outputs,
+          environment: {
+            temperature: conditions.temperature,
+            humidity: conditions.humidity,
+            airPressure: conditions.airPressure,
+          },
         });
-      });
-      setCalcResult(results.length > 0 ? results : null);
+
+        if (cancelled) return;
+        const rows: CalcRow[] = outputs.map(o => ({
+          test: `${o.testName} (${o.testCode})`,
+          unit: o.unit,
+          load: o.nominalLoad ? `${o.nominalLoad.toFixed(6)} ${o.unit}` : '—',
+          mean: o.count ? o.mean.toFixed(6) : '—',
+          stddev: o.count ? o.stddev.toFixed(6) : '—',
+          error: o.worstError != null ? `${o.worstError.toFixed(6)} ${o.unit}` : '—',
+          mpe: o.mpe != null ? `${o.mpe.toFixed(6)} ${o.unit}` : '—',
+          result: o.verdict,
+          standardVersion: o.standardVersion,
+          note: o.note,
+          limitLabel: o.limitLabel,
+        }));
+        setCalcOutputs(outputs);
+        setCalcResult(rows.length > 0 ? rows : null);
+        setCompliance(comp);
+      })();
+      return () => {
+        cancelled = true;
+      };
     }
-  }, [step, completed.length, observations]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, completed.length]);
 
   const fillSample = () => {
     setInstrument({ ...SAMPLE_INSTRUMENT });
@@ -443,6 +566,9 @@ export default function NewTestPage() {
     setObservations([]);
     clearWizardDraft();
     setDraftSavedAt(null);
+    setCalcOutputs(null);
+    setCompliance(null);
+    setDbSave(null);
   };
 
   const next = () => {
@@ -461,8 +587,9 @@ export default function NewTestPage() {
             id: `obs-${obsIdx}-${t.code}-${Date.now()}`,
             testName: t.name,
             testCode: t.code,
+            nominalLoad: instrument.maxCapacity,
             measuredValues: ['', '', '', '', ''],
-            unit: 'g',
+            unit: instrument.scaleIntervalUnit || 'g',
             notes: '',
           });
         });
@@ -480,8 +607,9 @@ export default function NewTestPage() {
               id: `obs-${Date.now()}-${t.code}`,
               testName: t.name,
               testCode: t.code,
+              nominalLoad: instrument.maxCapacity,
               measuredValues: ['', '', '', '', ''],
-              unit: 'g',
+              unit: instrument.scaleIntervalUnit || 'g',
               notes: '',
             });
           }
@@ -501,6 +629,7 @@ export default function NewTestPage() {
 
   if (submittedTest) {
     return (
+      <RouteGuard requiredRoles={['admin', 'tester']}>
       <DashboardLayout breadcrumbs={[{ label: 'Test Reports', href: '/tests' }, { label: 'Submitted' }]}>
         <div className="max-w-2xl mx-auto py-6">
           <div className="bg-white border border-gray-200 rounded-md p-6 sm:p-8 text-center shadow-xs">
@@ -527,10 +656,21 @@ export default function NewTestPage() {
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-gray-600 font-medium">Compliance Verdict:</span>
-                <span className={`font-bold ${submittedTest.complianceResult === 'compliant' ? 'text-green-700' : 'text-red-700'}`}>
+                <span className={`font-bold ${submittedTest.complianceResult === 'compliant' ? 'text-green-700' : submittedTest.complianceResult === 'conditional' ? 'text-amber-700' : 'text-red-700'}`}>
                   {submittedTest.complianceResult.toUpperCase()}
                 </span>
               </div>
+              {dbSave && dbSave.warnings.length === 0 && dbSave.saved && (
+                <div className="flex items-center justify-between text-gray-600">
+                  <span className="font-medium">Database Record:</span>
+                  <span className="font-mono text-gray-900">{dbSave.reportNumber ?? '—'}</span>
+                </div>
+              )}
+              {dbSave && dbSave.warnings.length > 0 && (
+                <div className="pt-2 border-t border-blue-200/60 text-amber-800 leading-relaxed">
+                  <strong>DB save skipped:</strong> {dbSave.warnings.join(' ')}
+                </div>
+              )}
               <div className="pt-2 border-t border-blue-200/60 text-blue-900 leading-relaxed">
                 🔔 <strong>Notification dispatched:</strong> Reviewer (Dr. K. Sharma) has been notified. This report is now waiting in the Review Queue on the Reviewer Dashboard for verification and approval.
               </div>
@@ -581,10 +721,12 @@ export default function NewTestPage() {
           test={submittedTest}
         />
       </DashboardLayout>
+      </RouteGuard>
     );
   }
 
   return (
+    <RouteGuard requiredRoles={['admin', 'tester']}>
     <DashboardLayout breadcrumbs={[{ label: 'Test Reports', href: '/tests' }, { label: 'New Test' }]}>
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
@@ -807,6 +949,38 @@ export default function NewTestPage() {
                         <span className="text-[11px] font-mono text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">{obs.testCode}</span>
                       </div>
                     </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-3">
+                      <Field label="Nominal Load (L)">
+                        <Input
+                          value={obs.nominalLoad}
+                          onChange={v => {
+                            const newObs = [...observations];
+                            newObs[oi].nominalLoad = v;
+                            setObservations(newObs);
+                          }}
+                          placeholder="Test load applied"
+                          unit={obs.unit}
+                          type="number"
+                        />
+                      </Field>
+                      <Field label="Readings Unit">
+                        <select
+                          value={obs.unit}
+                          onChange={e => {
+                            const newObs = [...observations];
+                            newObs[oi].unit = e.target.value;
+                            setObservations(newObs);
+                          }}
+                          className="w-full h-[34px] px-3 border border-gray-300 rounded-sm text-[13px] text-gray-900 focus:outline-none focus:border-[#1e3a5f] focus:ring-1 focus:ring-blue-200 bg-white"
+                        >
+                          <option value="g">g</option>
+                          <option value="kg">kg</option>
+                          <option value="mg">mg</option>
+                          <option value="lb">lb</option>
+                          <option value="t">t</option>
+                        </select>
+                      </Field>
+                    </div>
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
                       {obs.measuredValues.map((val, vi) => (
                         <div key={vi}>
@@ -863,23 +1037,35 @@ export default function NewTestPage() {
                   <thead>
                     <tr className="border-b border-gray-200">
                       <th className="text-left py-2 px-3 font-semibold text-gray-700 text-[11px] uppercase">Test</th>
+                      <th className="text-right py-2 px-3 font-semibold text-gray-700 text-[11px] uppercase">Load</th>
                       <th className="text-right py-2 px-3 font-semibold text-gray-700 text-[11px] uppercase">Mean</th>
                       <th className="text-right py-2 px-3 font-semibold text-gray-700 text-[11px] uppercase">Std Dev</th>
+                      <th className="text-right py-2 px-3 font-semibold text-gray-700 text-[11px] uppercase">Worst Err</th>
+                      <th className="text-right py-2 px-3 font-semibold text-gray-700 text-[11px] uppercase">MPE</th>
                       <th className="text-right py-2 px-3 font-semibold text-gray-700 text-[11px] uppercase">Result</th>
                     </tr>
                   </thead>
                   <tbody>
                     {calcResult.map((r, i) => (
-                      <tr key={i} className="border-b border-gray-100">
+                      <tr key={i} className="border-b border-gray-100" title={r.limitLabel}>
                         <td className="py-2 px-3 font-medium text-gray-900">{r.test}</td>
+                        <td className="py-2 px-3 text-right font-mono text-gray-700">{r.load}</td>
                         <td className="py-2 px-3 text-right font-mono text-gray-700">{r.mean}</td>
                         <td className="py-2 px-3 text-right font-mono text-gray-700">{r.stddev}</td>
+                        <td className="py-2 px-3 text-right font-mono text-gray-700">{r.error}</td>
+                        <td className="py-2 px-3 text-right font-mono text-gray-700">{r.mpe}</td>
                         <td className="py-2 px-3 text-right">
-                          <span className={`inline-flex px-1.5 py-0.5 rounded-sm text-[11px] font-semibold ${
-                            r.result === 'PASS' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'
-                          }`}>
-                            {r.result}
-                          </span>
+                          {r.result === 'NOT_CONFIGURED' ? (
+                            <span className="inline-flex px-1.5 py-0.5 rounded-sm text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200" title={r.note}>
+                              NOT CONFIGURED
+                            </span>
+                          ) : (
+                            <span className={`inline-flex px-1.5 py-0.5 rounded-sm text-[11px] font-semibold ${
+                              r.result === 'PASS' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'
+                            }`}>
+                              {r.result}
+                            </span>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -889,11 +1075,40 @@ export default function NewTestPage() {
             ) : (
               <p className="text-[13px] text-gray-400 text-center py-8">No observations to calculate. Go back and enter observations.</p>
             )}
-            <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-sm">
-              <p className="text-[11px] text-amber-700">
-                <strong>Note:</strong> These are demo calculations for demonstration purposes. Actual compliance evaluation uses the backend calculation engine with versioned OIML R-76 rules.
-              </p>
-            </div>
+
+            {/* Compliance panel */}
+            {compliance && (
+              <div className={`mt-4 border rounded-sm p-4 ${compliance.verdict === 'non-compliant' ? 'border-red-200 bg-red-50/60' : compliance.verdict === 'conditional' ? 'border-amber-200 bg-amber-50/60' : 'border-green-200 bg-green-50/60'}`}>
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                  <h3 className="text-[13px] font-semibold text-gray-900">Compliance Evaluation</h3>
+                  <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-sm text-[11px] font-bold border ${
+                    compliance.verdict === 'non-compliant' ? 'bg-red-100 text-red-800 border-red-300' : compliance.verdict === 'conditional' ? 'bg-amber-100 text-amber-800 border-amber-300' : 'bg-green-100 text-green-800 border-green-300'
+                  }`}>
+                    {compliance.verdict.toUpperCase()}
+                  </span>
+                </div>
+                <ul className="space-y-1.5 text-[12px]">
+                  {compliance.checks.map((c, i) => (
+                    <li key={i} className="flex items-start gap-2">
+                      <span className={`w-2 h-2 rounded-full mt-1 shrink-0 ${
+                        c.verdict === 'PASS' ? 'bg-green-500' : c.verdict === 'FAIL' ? 'bg-red-500' : c.verdict === 'CONDITIONAL' ? 'bg-amber-400' : 'bg-gray-300'
+                      }`} />
+                      <span>
+                        <span className="font-medium text-gray-800">{c.title}:</span>{' '}
+                        <span className="text-gray-600">{c.detail}</span>
+                        {c.standardVersion && <span className="text-gray-400"> (rule v{c.standardVersion})</span>}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-3 pt-2 border-t border-black/5 text-[11px] text-gray-500">
+                  Standard <strong>{compliance.standard}</strong> &bull; rules {compliance.rulesSource === 'db' ? 'loaded from database (versioned)' : 'inline defaults (DB rules unavailable)'} &bull;{' '}
+                  {compliance.pendingTests > 0
+                    ? `${compliance.pendingTests} test(s) pending rule configuration.`
+                    : 'All evaluated tests resolved.'}
+                </p>
+              </div>
+            )}
             {/* Rule-first explanations: why each result passed/failed (no AI).
                 "Enhance with AI" inside each box is the ONLY Gemini call site. */}
             {calcResult && calcResult.length > 0 && (
@@ -945,8 +1160,11 @@ export default function NewTestPage() {
                       <thead>
                         <tr className="border-b border-gray-200">
                           <th className="text-left py-1.5 font-semibold text-gray-700">Test</th>
+                          <th className="text-right py-1.5 font-semibold text-gray-700">Load</th>
                           <th className="text-right py-1.5 font-semibold text-gray-700">Mean</th>
                           <th className="text-right py-1.5 font-semibold text-gray-700">Std Dev</th>
+                          <th className="text-right py-1.5 font-semibold text-gray-700">Worst Err</th>
+                          <th className="text-right py-1.5 font-semibold text-gray-700">MPE</th>
                           <th className="text-right py-1.5 font-semibold text-gray-700">Result</th>
                         </tr>
                       </thead>
@@ -954,15 +1172,40 @@ export default function NewTestPage() {
                         {calcResult.map((r, i) => (
                           <tr key={i} className="border-b border-gray-100">
                             <td className="py-1.5 font-medium text-gray-900">{r.test}</td>
+                            <td className="py-1.5 text-right font-mono">{r.load}</td>
                             <td className="py-1.5 text-right font-mono">{r.mean}</td>
                             <td className="py-1.5 text-right font-mono">{r.stddev}</td>
+                            <td className="py-1.5 text-right font-mono">{r.error}</td>
+                            <td className="py-1.5 text-right font-mono">{r.mpe}</td>
                             <td className="py-1.5 text-right">
-                              <span className="px-1.5 py-0.5 rounded-sm text-[11px] font-semibold bg-green-50 text-green-700 border border-green-200">{r.result}</span>
+                              {r.result === 'NOT_CONFIGURED' ? (
+                                <span className="px-1.5 py-0.5 rounded-sm text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">NOT CONFIGURED</span>
+                              ) : (
+                                <span className={`px-1.5 py-0.5 rounded-sm text-[11px] font-semibold border ${
+                                  r.result === 'PASS' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'
+                                }`}>{r.result}</span>
+                              )}
                             </td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Compliance summary */}
+              {compliance && (
+                <div className={`border rounded-sm p-4 ${compliance.verdict === 'non-compliant' ? 'border-red-200 bg-red-50/60' : compliance.verdict === 'conditional' ? 'border-amber-200 bg-amber-50/60' : 'border-green-200 bg-green-50/60'}`}>
+                  <h3 className="text-[13px] font-semibold text-gray-900 mb-2">Compliance Verdict</h3>
+                  <div className="flex flex-wrap items-center gap-2 text-[12px]">
+                    <span className={`font-bold uppercase ${
+                      compliance.verdict === 'non-compliant' ? 'text-red-700' : compliance.verdict === 'conditional' ? 'text-amber-700' : 'text-green-700'
+                    }`}>{compliance.verdict}</span>
+                    <span className="text-gray-500">per {compliance.standard} (rules v{compliance.standardVersion || 'default'})</span>
+                    {compliance.pendingTests > 0 && (
+                      <span className="text-amber-700">{compliance.pendingTests} test(s) pending rule configuration</span>
+                    )}
                   </div>
                 </div>
               )}
@@ -1037,5 +1280,6 @@ export default function NewTestPage() {
         }}
       />
     </DashboardLayout>
+    </RouteGuard>
   );
 }

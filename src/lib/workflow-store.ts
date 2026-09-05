@@ -429,6 +429,8 @@ export const workflowStore = {
       notes?: string;
     }[];
     technicianName?: string;
+    /** Override the derived verdict (real compliance engine output). */
+    complianceResult?: ComplianceVerdict;
   }): StoredTest {
     const tests = this.getTests();
     const testCount = tests.length + 1;
@@ -437,7 +439,8 @@ export const workflowStore = {
     const testId = `TR-${padded}`;
 
     const hasFailure = input.observations.some(o => o.verdict === 'FAIL');
-    const complianceResult: ComplianceVerdict = hasFailure ? 'non-compliant' : 'compliant';
+    const complianceResult: ComplianceVerdict =
+      input.complianceResult ?? (hasFailure ? 'non-compliant' : 'compliant');
 
     const newTest: StoredTest = {
       id: testId,
