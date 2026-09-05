@@ -87,7 +87,37 @@ export function downloadTestReportDOCX(test: StoredTest, report?: StoredReport):
         <tr><th>Air Pressure</th><td>${test.airPressure || '1013'} hPa</td><th>Test Location</th><td>${test.testLocation || 'Standard Lab'}</td></tr>
       </table>
 
-      <h2>4. Test Observations & Evaluation</h2>
+      <h2>4. Equipment Used</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Equipment</th>
+            <th>Type</th>
+            <th>Serial No.</th>
+            <th>Nominal Value</th>
+            <th>Calibration Valid Until</th>
+            <th>Certificate No.</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${test.equipment && test.equipment.length > 0 ? test.equipment.map(eq => `
+            <tr>
+              <td>${eq.name}</td>
+              <td>${String(eq.type || '').replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</td>
+              <td>${eq.serialNumber || '—'}</td>
+              <td>${eq.nominalValue ? `${eq.nominalValue} ${eq.nominalValueUnit || ''}`.trim() : '—'}</td>
+              <td>${eq.calibrationValidUntil || '—'}</td>
+              <td>${eq.certificateNumber || '—'}</td>
+            </tr>
+          `).join('') : `
+            <tr>
+              <td colspan="6">No external equipment / calibration weights were used.</td>
+            </tr>
+          `}
+        </tbody>
+      </table>
+
+      <h2>5. Test Observations & Evaluation</h2>
       <table>
         <thead>
           <tr>
@@ -112,8 +142,23 @@ export function downloadTestReportDOCX(test: StoredTest, report?: StoredReport):
           `).join('')}
         </tbody>
       </table>
+      ${test.observations.some(o => o.photos && o.photos.length > 0) ? `
+      <h2>6. Observation Photographs</h2>
+      <table>
+        <tbody>
+          ${test.observations.filter(o => o.photos && o.photos.length > 0).map(obs => obs.photos!.map(p => `
+            <tr>
+              <td style="width: 45%">
+                <img src="${p.src}" alt="${p.name}" style="max-width: 220px; max-height: 180px;"><br />
+                <strong>${obs.testName} (${obs.testCode})</strong> — ${p.name}
+              </td>
+            </tr>
+          `).join('')).join('')}
+        </tbody>
+      </table>
+      ` : ''}
 
-      <h2>5. Verification & Review Remarks</h2>
+      <h2>7. Verification & Review Remarks</h2>
       <p>${test.reviewNotes || 'Verification completed according to OIML R-76 specifications.'}</p>
       
       <table>
@@ -437,7 +482,37 @@ function generateReportHTML(test: StoredTest, report?: StoredReport, qrText?: st
         </tr>
       </table>
 
-      <div class="section-title">4. Test Observations & Metrological Evaluation</div>
+      <div class="section-title">4. Equipment Used</div>
+      <table class="data-table" style="margin-top: 6px;">
+        <thead>
+          <tr>
+            <th>Equipment</th>
+            <th>Type</th>
+            <th>Serial Number</th>
+            <th>Nominal Value</th>
+            <th>Calibration Valid Until</th>
+            <th>Certificate No.</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${test.equipment && test.equipment.length > 0 ? test.equipment.map(eq => `
+            <tr>
+              <td><strong>${eq.name}</strong></td>
+              <td>${String(eq.type || '').replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</td>
+              <td class="mono">${eq.serialNumber || '—'}</td>
+              <td class="mono">${eq.nominalValue ? `${eq.nominalValue} ${eq.nominalValueUnit || ''}`.trim() : '—'}</td>
+              <td class="mono">${eq.calibrationValidUntil || '—'}</td>
+              <td class="mono">${eq.certificateNumber || '—'}</td>
+            </tr>
+          `).join('') : `
+            <tr>
+              <td colspan="6" class="text-center" style="color: #64748b; padding: 12px;">No external equipment / calibration weights were used</td>
+            </tr>
+          `}
+        </tbody>
+      </table>
+
+      <div class="section-title">5. Test Observations & Metrological Evaluation</div>
       <table class="data-table">
         <thead>
           <tr>
@@ -471,7 +546,21 @@ function generateReportHTML(test: StoredTest, report?: StoredReport, qrText?: st
         </tbody>
       </table>
 
-      <div class="section-title">5. Reviewer Remarks & Audit Stamp</div>
+      ${test.observations.some(o => o.photos && o.photos.length > 0) ? `
+      <div class="section-title">6. Observation Photographs</div>
+      <div style="display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 12px;">
+        ${test.observations.filter(o => o.photos && o.photos.length > 0).map(obs => obs.photos!.map(p => `
+          <figure style="margin: 0; break-inside: avoid;">
+            <img src="${p.src}" alt="${p.name}" style="max-width: 220px; max-height: 180px; border: 1px solid #e2e8f0; border-radius: 4px; display: block;" />
+            <figcaption style="font-size: 7.5pt; color: #64748b; margin-top: 3px; max-width: 220px;">
+              <strong>${obs.testName} (${obs.testCode})</strong> — ${p.name}
+            </figcaption>
+          </figure>
+        `).join('')).join('')}
+      </div>
+      ` : ''}
+
+      <div class="section-title">7. Reviewer Remarks & Audit Stamp</div>
       <p style="margin: 6px 0 16px 0; font-size: 9pt; color: #334155; line-height: 1.5;">
         ${test.reviewNotes || 'The test results comply with the Maximum Permissible Error (MPE) thresholds stipulated under OIML Recommendation R-76 for Non-Automatic Weighing Instruments.'}
       </p>

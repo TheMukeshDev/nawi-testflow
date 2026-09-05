@@ -202,6 +202,39 @@ export const supabaseDb = {  /**
   },
 
   /**
+   * Fetch a single test equipment record from Supabase by id
+   */
+  async getEquipmentById(id: string): Promise<any | null> {
+    try {
+      const res = await fetch(`/api/db/test_equipment?id=eq.${encodeURIComponent(id)}&select=*`, { cache: 'no-store' });
+      if (res.ok) {
+        const rows = await res.json();
+        const r = Array.isArray(rows) ? rows[0] : null;
+        if (r) {
+          return {
+            id: r.id,
+            name: r.equipment_name || '',
+            type: r.equipment_type || '',
+            manufacturer: '',
+            model: '',
+            serialNumber: r.serial_number || '',
+            certificateNumber: r.certificate_number || '',
+            laboratoryCode: '',
+            laboratoryName: '',
+            calibrationDate: r.calibration_date || '',
+            calibrationValidUntil: r.calibration_valid_until || '',
+            condition: 'good',
+            createdAt: r.created_at || '',
+          };
+        }
+      }
+    } catch (err) {
+      console.warn('[supabaseDb] Failed to fetch equipment item:', err);
+    }
+    return null;
+  },
+
+  /**
    * Fetch all users from Supabase profiles
    */
   async getUsers(): Promise<DbUser[]> {

@@ -60,6 +60,11 @@ interface ConditionData {
   notes: string;
 }
 
+interface ObservationPhoto {
+  name: string;
+  src: string;
+}
+
 interface ObservationEntry {
   id: string;
   testName: string;
@@ -68,7 +73,41 @@ interface ObservationEntry {
   measuredValues: string[];
   unit: string;
   notes: string;
+  photos?: ObservationPhoto[];
 }
+
+interface EquipmentItem {
+  id: string;
+  name: string;
+  type: 'standard-weight' | 'calibrated-weight' | 'accessory' | 'tool';
+  serialNumber: string;
+  nominalValue: string;
+  nominalValueUnit: string;
+  calibrationDate: string;
+  calibrationValidUntil: string;
+  certificateNumber: string;
+  roleInTest: string;
+}
+
+const EQUIPMENT_TYPES: { value: EquipmentItem['type']; label: string }[] = [
+  { value: 'standard-weight', label: 'Standard Weight' },
+  { value: 'calibrated-weight', label: 'Calibrated Weight' },
+  { value: 'accessory', label: 'Accessory' },
+  { value: 'tool', label: 'Tool' },
+];
+
+const EMPTY_EQUIPMENT: EquipmentItem = {
+  id: '',
+  name: '',
+  type: 'standard-weight',
+  serialNumber: '',
+  nominalValue: '',
+  nominalValueUnit: 'g',
+  calibrationDate: '',
+  calibrationValidUntil: '',
+  certificateNumber: '',
+  roleInTest: '',
+};
 
 type CalcRow = {
   test: string;
@@ -142,6 +181,12 @@ const SAMPLE_OBSERVATIONS: ObservationEntry[] = [
   { id: 'sample-ecc', testName: 'Eccentricity', testCode: 'ECC', nominalLoad: '3000', measuredValues: ['3000.001', '3000.005', '3000.003', '3000.008', '3000.002'], unit: 'g', notes: 'Center, Front, Back, Left, Right' },
 ];
 
+const SAMPLE_EQUIPMENT: EquipmentItem[] = [
+  { id: 'sample-eq-1', name: 'E2 standard weight set (1 g – 200 g)', type: 'standard-weight', serialNumber: 'SW-2026-118', nominalValue: '200', nominalValueUnit: 'g', calibrationDate: '2026-01-05', calibrationValidUntil: '2027-01-04', certificateNumber: 'WCC/2026/0147', roleInTest: 'Test loads for RPT & ECC' },
+  { id: 'sample-eq-2', name: 'Cast iron calibration weight 2 kg', type: 'calibrated-weight', serialNumber: 'CW-2026-042', nominalValue: '2000', nominalValueUnit: 'g', calibrationDate: '2025-11-20', calibrationValidUntil: '2026-11-19', certificateNumber: 'WCC/2025/0891', roleInTest: 'Max capacity load' },
+  { id: 'sample-eq-3', name: 'Precision tweezers', type: 'accessory', serialNumber: '', nominalValue: '', nominalValueUnit: 'g', calibrationDate: '', calibrationValidUntil: '', certificateNumber: '', roleInTest: 'Weight handling' },
+];
+
 // ═══════════════════════════════════════════════════════════════
 // STEP INDICATOR
 // ═══════════════════════════════════════════════════════════════
@@ -149,10 +194,11 @@ const SAMPLE_OBSERVATIONS: ObservationEntry[] = [
 const STEPS = [
   { label: 'Instrument', short: '1' },
   { label: 'Conditions', short: '2' },
-  { label: 'Tests', short: '3' },
-  { label: 'Observations', short: '4' },
-  { label: 'Calculate', short: '5' },
-  { label: 'Result', short: '6' },
+  { label: 'Equipment', short: '3' },
+  { label: 'Tests', short: '4' },
+  { label: 'Observations', short: '5' },
+  { label: 'Calculate', short: '6' },
+  { label: 'Result', short: '7' },
 ];
 
 // ─────────────────────────────────────────────────────────────
@@ -171,6 +217,7 @@ interface WizardDraft {
   completed: number[];
   instrument: InstrumentData;
   conditions: ConditionData;
+  equipment: EquipmentItem[];
   tests: TestSelection[];
   observations: ObservationEntry[];
   savedAt: number;
@@ -283,12 +330,40 @@ function Input({ value, onChange, placeholder, unit, type = 'text', disabled }: 
 // MAIN WIZARD
 // ═══════════════════════════════════════════════════════════════
 
+async function fileToThumbnailDataURL(file: File, maxDim = 1024, quality = 0.72): Promise<string> {
+  const raw = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const i = new Image();
+      i.onload = () => resolve(i);
+      i.onerror = () => reject(new Error('decode failed'));
+      i.src = raw;
+    });
+    const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+    const w = Math.max(1, Math.round(img.width * scale));
+    const h = Math.max(1, Math.round(img.height * scale));
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    canvas.getContext('2d')?.drawImage(img, 0, 0, w, h);
+    return canvas.toDataURL('image/jpeg', quality);
+  } catch {
+    return raw;
+  }
+}
+
 export default function NewTestPage() {
   const { user } = useAuth();
   const [step, setStep] = useState(0);
   const [completed, setCompleted] = useState<number[]>([]);
   const [instrument, setInstrument] = useState<InstrumentData>({ ...INITIAL_INSTRUMENT });
   const [conditions, setConditions] = useState<ConditionData>({ ...INITIAL_CONDITIONS });
+  const [equipment, setEquipment] = useState<EquipmentItem[]>([]);
   const [tests, setTests] = useState<TestSelection[]>(AVAILABLE_TESTS.map(t => ({ ...t })));
   const [observations, setObservations] = useState<ObservationEntry[]>([]);
   const [showResult, setShowResult] = useState(false);
@@ -299,7 +374,6 @@ export default function NewTestPage() {
   const [submittedTest, setSubmittedTest] = useState<StoredTest | null>(null);
   const [showResultModal, setShowResultModal] = useState(false);
   const [serialTarget, setSerialTarget] = useState<{ oi: number; vi: number; label: string } | null>(null);
-  const calculatedRef = useRef<number>(-1);
 
   // ── Draft auto-save: restore a half-completed test after refresh / navigation ──
   const [draftSavedAt, setDraftSavedAt] = useState<number | null>(null);
@@ -317,6 +391,7 @@ export default function NewTestPage() {
       if (Array.isArray(draft.completed)) setCompleted(draft.completed);
       if (draft.instrument) setInstrument({ ...INITIAL_INSTRUMENT, ...draft.instrument });
       if (draft.conditions) setConditions({ ...INITIAL_CONDITIONS, ...draft.conditions });
+      if (Array.isArray(draft.equipment)) setEquipment(draft.equipment);
       if (Array.isArray(draft.tests) && draft.tests.length > 0) setTests(draft.tests);
       if (Array.isArray(draft.observations)) setObservations(draft.observations);
       setDraftSavedAt(draft.savedAt || Date.now());
@@ -333,6 +408,7 @@ export default function NewTestPage() {
         completed,
         instrument,
         conditions,
+        equipment,
         tests,
         observations,
         savedAt: Date.now(),
@@ -343,7 +419,7 @@ export default function NewTestPage() {
       }
     }, 700);
     return () => window.clearTimeout(timer);
-  }, [step, completed, instrument, conditions, tests, observations, submittedTest]);
+  }, [step, completed, instrument, conditions, equipment, tests, observations, submittedTest]);
 
   const discardDraft = () => {
     clearWizardDraft();
@@ -352,6 +428,7 @@ export default function NewTestPage() {
     setCompleted([]);
     setInstrument({ ...INITIAL_INSTRUMENT });
     setConditions({ ...INITIAL_CONDITIONS });
+    setEquipment([]);
     setTests(AVAILABLE_TESTS.map(t => ({ ...t })));
     setObservations([]);
     setCalcResult(null);
@@ -360,8 +437,8 @@ export default function NewTestPage() {
     setDbSave(null);
   };
 
-  const handleSubmitForReview = async () => {
-    const formattedObs = observations.map((obs, i) => {
+  const buildFormattedObservations = () =>
+    observations.map((obs, i) => {
       const calc = calcOutputs?.[i];
       const notEvaluated = calc?.verdict === 'NOT_CONFIGURED';
       const notes = notEvaluated
@@ -376,8 +453,56 @@ export default function NewTestPage() {
         verdict: (calc?.verdict === 'FAIL' ? 'FAIL' : 'PASS') as 'PASS' | 'FAIL',
         unit: obs.unit,
         notes,
-      };
+        photos: obs.photos && obs.photos.length > 0 ? obs.photos : undefined,
+      } satisfies StoredTest['observations'][number];
     });
+
+  // Snapshot of the current wizard state as a StoredTest — used for live
+  // PDF/DOCX downloads from the Result step (before final submission).
+  const buildPreviewTest = (): StoredTest | null => {
+    const formattedObs = buildFormattedObservations();
+    return {
+      id: 'draft-preview',
+      testNumber: `DRAFT-${new Date().toISOString().slice(0, 10)}`,
+      instrumentSerial: instrument.serialNumber || 'DRAFT-SN',
+      instrumentModel: instrument.model || 'Standard Digital Balance',
+      instrumentManufacturer: instrument.manufacturer || 'Metrology Standards Corp',
+      instrumentClass: instrument.instrumentClass || 'III',
+      maxCapacity: instrument.maxCapacity || '3000',
+      maxCapacityUnit: instrument.maxCapacityUnit || 'g',
+      scaleInterval: instrument.scaleInterval || '0.01',
+      scaleIntervalUnit: instrument.scaleIntervalUnit || 'g',
+      verificationScaleInterval: instrument.verificationScaleInterval || instrument.scaleInterval || '0.1',
+      softwareVersion: instrument.softwareVersion || '—',
+      laboratory: conditions.laboratoryName || 'Not specified',
+      verificationType: 'Initial',
+      status: 'in-testing',
+      complianceResult: compliance?.verdict ?? 'pending',
+      technician: user?.full_name || 'Priya Mehta',
+      temperature: conditions.temperature,
+      humidity: conditions.humidity,
+      airPressure: conditions.airPressure,
+      testLocation: conditions.testLocation,
+      testDate: conditions.testDate || new Date().toISOString().slice(0, 10),
+      observations: formattedObs,
+      equipment: equipment.map(e => ({
+        name: e.name,
+        type: e.type,
+        serialNumber: e.serialNumber || undefined,
+        nominalValue: e.nominalValue || undefined,
+        nominalValueUnit: e.nominalValueUnit || undefined,
+        calibrationDate: e.calibrationDate || undefined,
+        calibrationValidUntil: e.calibrationValidUntil || undefined,
+        certificateNumber: e.certificateNumber || undefined,
+        roleInTest: e.roleInTest || undefined,
+      })),
+      createdAt: new Date().toISOString(),
+      lastUpdated: new Date().toISOString(),
+    };
+  };
+
+  const handleSubmitForReview = async () => {
+    const formattedObs = buildFormattedObservations();
 
     const newTest = workflowStore.submitNewTest({
       instrument: {
@@ -401,6 +526,17 @@ export default function NewTestPage() {
         laboratoryName: conditions.laboratoryName,
       },
       observations: formattedObs,
+      equipment: equipment.map(e => ({
+        name: e.name,
+        type: e.type,
+        serialNumber: e.serialNumber || undefined,
+        nominalValue: e.nominalValue || undefined,
+        nominalValueUnit: e.nominalValueUnit || undefined,
+        calibrationDate: e.calibrationDate || undefined,
+        calibrationValidUntil: e.calibrationValidUntil || undefined,
+        certificateNumber: e.certificateNumber || undefined,
+        roleInTest: e.roleInTest || undefined,
+      })),
       technicianName: user?.full_name || 'Priya Mehta',
       complianceResult: compliance?.verdict ?? 'pending',
     });
@@ -432,6 +568,17 @@ export default function NewTestPage() {
         computations: calcOutputs,
         complianceVerdict: compliance?.verdict ?? 'pending',
         technicianName: user?.full_name || 'Priya Mehta',
+        equipment: equipment.map(e => ({
+          name: e.name,
+          type: e.type,
+          serialNumber: e.serialNumber || undefined,
+          nominalValue: e.nominalValue || undefined,
+          nominalValueUnit: e.nominalValueUnit || undefined,
+          calibrationDate: e.calibrationDate || undefined,
+          calibrationValidUntil: e.calibrationValidUntil || undefined,
+          certificateNumber: e.certificateNumber || undefined,
+          roleInTest: e.roleInTest || undefined,
+        })),
       });
       setDbSave({
         saved: pers.ok,
@@ -473,13 +620,35 @@ export default function NewTestPage() {
     });
   }, [calcResult]);
 
-  // Auto-calculate when reaching step 4 (Calculate) — real OIML R-76
+  // Recalculate when any value consumed by the calculation engine changes.
+  // Using completed.length here caused stale results after observations were edited.
+  const calculationKey = useMemo(
+    () => JSON.stringify({
+      instrument: {
+        instrumentClass: instrument.instrumentClass,
+        maxCapacity: instrument.maxCapacity,
+        maxCapacityUnit: instrument.maxCapacityUnit,
+        scaleInterval: instrument.scaleInterval,
+        scaleIntervalUnit: instrument.scaleIntervalUnit,
+        verificationScaleInterval: instrument.verificationScaleInterval,
+      },
+      observations,
+      conditions: {
+        temperature: conditions.temperature,
+        humidity: conditions.humidity,
+        airPressure: conditions.airPressure,
+      },
+    }),
+    [instrument, observations, conditions],
+  );
+
+  // Auto-calculate on step 5 and whenever its inputs change — real OIML R-76
   // engine (DB-backed rules when available, default tables otherwise).
   useEffect(() => {
-    if (step === 4 && calculatedRef.current !== completed.length) {
-      let cancelled = false;
-      calculatedRef.current = completed.length;
-      (async () => {
+    if (step !== 5) return;
+
+    let cancelled = false;
+    (async () => {
         const spec: InstrumentSpec = {
           instrumentClass: (instrument.instrumentClass || 'III') as InstrumentClass,
           maxCapacity: parseFloat(instrument.maxCapacity) || 0,
@@ -541,17 +710,18 @@ export default function NewTestPage() {
         setCalcOutputs(outputs);
         setCalcResult(rows.length > 0 ? rows : null);
         setCompliance(comp);
-      })();
-      return () => {
-        cancelled = true;
-      };
-    }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, completed.length]);
+  }, [step, calculationKey]);
 
   const fillSample = () => {
     setInstrument({ ...SAMPLE_INSTRUMENT });
     setConditions({ ...SAMPLE_CONDITIONS });
+    setEquipment(SAMPLE_EQUIPMENT.map(e => ({ ...e })));
     setTests(AVAILABLE_TESTS.map(t => ({
       ...t,
       selected: ['RPT', 'ECC'].includes(t.code),
@@ -562,6 +732,7 @@ export default function NewTestPage() {
   const clearSample = () => {
     setInstrument({ ...INITIAL_INSTRUMENT });
     setConditions({ ...INITIAL_CONDITIONS });
+    setEquipment([]);
     setTests(AVAILABLE_TESTS.map(t => ({ ...t, selected: t.code === 'RPT' })));
     setObservations([]);
     clearWizardDraft();
@@ -572,7 +743,7 @@ export default function NewTestPage() {
   };
 
   const next = () => {
-    if (step === 2) {
+    if (step === 3) {
       // Leaving Test Selection → build observation blocks so they are
       // visible immediately on the Observations screen. Preserve entered data.
       const selectedTests = tests.filter(t => t.selected);
@@ -625,6 +796,37 @@ export default function NewTestPage() {
 
   const toggleTest = (code: string) => {
     setTests(tests.map(t => t.code === code ? { ...t, selected: !t.selected } : t));
+  };
+
+  const addEquipmentItem = () => {
+    setEquipment([...equipment, { ...EMPTY_EQUIPMENT, id: `eq-${Date.now()}-${equipment.length}` }]);
+  };
+
+  const updateEquipmentItem = (idx: number, patch: Partial<EquipmentItem>) => {
+    setEquipment(equipment.map((e, i) => (i === idx ? { ...e, ...patch } : e)));
+  };
+
+  const removeEquipmentItem = (idx: number) => {
+    setEquipment(equipment.filter((_, i) => i !== idx));
+  };
+
+  const attachPhotos = async (oi: number, files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const newObs = [...observations];
+    const added: ObservationPhoto[] = [];
+    for (const file of Array.from(files)) {
+      const src = await fileToThumbnailDataURL(file);
+      added.push({ name: file.name, src });
+    }
+    newObs[oi] = { ...newObs[oi], photos: [...(newObs[oi].photos ?? []), ...added] };
+    setObservations(newObs);
+  };
+
+  const removePhoto = (oi: number, photoIdx: number) => {
+    const newObs = [...observations];
+    const photos = (newObs[oi].photos ?? []).filter((_, i) => i !== photoIdx);
+    newObs[oi] = { ...newObs[oi], photos };
+    setObservations(newObs);
   };
 
   if (submittedTest) {
@@ -879,8 +1081,104 @@ export default function NewTestPage() {
           </div>
         )}
 
-        {/* STEP 2: Test Selection */}
+        {/* STEP 2: Equipment */}
         {step === 2 && (
+          <div>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-1">
+              <div>
+                <h2 className="text-[15px] font-semibold text-gray-900">Equipment & Calibration Weights</h2>
+                <p className="text-[12px] text-gray-500 mt-0.5">Record reference weights and accessories used during testing</p>
+              </div>
+              <button
+                type="button"
+                onClick={addEquipmentItem}
+                className="px-3 py-1.5 bg-[#1e3a5f] hover:bg-[#162d4a] text-white text-[12px] font-medium rounded-sm inline-flex items-center gap-1.5 transition-colors self-start sm:self-auto cursor-pointer"
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="12" y1="5" x2="12" y2="19" strokeLinecap="round" />
+                  <line x1="5" y1="12" x2="19" y2="12" strokeLinecap="round" />
+                </svg>
+                Add Equipment Item
+              </button>
+            </div>
+            {equipment.length === 0 ? (
+              <p className="text-[13px] text-gray-400 text-center py-8">
+                No equipment recorded yet. Reference weights are required for OIML R-76 load application — add them here.
+              </p>
+            ) : (
+              <div className="space-y-4 mt-3">
+                {equipment.map((eq, i) => (
+                  <div key={eq.id} className="border border-gray-200 rounded-sm p-4">
+                    <div className="flex items-center justify-between gap-2 mb-3">
+                      <span className="text-[13px] font-semibold text-gray-900">Equipment {i + 1}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeEquipmentItem(i)}
+                        className="text-[11px] text-red-600 hover:text-red-700 font-medium cursor-pointer inline-flex items-center gap-1"
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                        Remove
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                      <Field label="Equipment Name" required>
+                        <Input value={eq.name} onChange={v => updateEquipmentItem(i, { name: v })} placeholder="e.g. E2 weight set 1–200 g" />
+                      </Field>
+                      <Field label="Type" required>
+                        <select
+                          value={eq.type}
+                          onChange={e => updateEquipmentItem(i, { type: e.target.value as EquipmentItem['type'] })}
+                          className="w-full h-[34px] px-3 border border-gray-300 rounded-sm text-[13px] text-gray-900 bg-white focus:outline-none focus:border-[#1e3a5f] focus:ring-1 focus:ring-blue-200"
+                        >
+                          {EQUIPMENT_TYPES.map(t => (
+                            <option key={t.value} value={t.value}>{t.label}</option>
+                          ))}
+                        </select>
+                      </Field>
+                      <Field label="Serial Number">
+                        <Input value={eq.serialNumber} onChange={v => updateEquipmentItem(i, { serialNumber: v })} placeholder="e.g. SW-2026-118" />
+                      </Field>
+                      <Field label="Nominal Value">
+                        <Input value={eq.nominalValue} onChange={v => updateEquipmentItem(i, { nominalValue: v })} placeholder="200" unit={eq.nominalValueUnit} type="number" />
+                      </Field>
+                      <Field label="Nominal Value Unit">
+                        <select
+                          value={eq.nominalValueUnit}
+                          onChange={e => updateEquipmentItem(i, { nominalValueUnit: e.target.value })}
+                          className="w-full h-[34px] px-3 border border-gray-300 rounded-sm text-[13px] text-gray-900 bg-white focus:outline-none focus:border-[#1e3a5f] focus:ring-1 focus:ring-blue-200"
+                        >
+                          {['g', 'kg', 'mg', 't'].map(u => <option key={u} value={u}>{u}</option>)}
+                        </select>
+                      </Field>
+                      <Field label="Calibration Date">
+                        <Input value={eq.calibrationDate} onChange={v => updateEquipmentItem(i, { calibrationDate: v })} type="date" />
+                      </Field>
+                      <Field label="Valid Until">
+                        <Input value={eq.calibrationValidUntil} onChange={v => updateEquipmentItem(i, { calibrationValidUntil: v })} type="date" />
+                      </Field>
+                      <Field label="Certificate Number">
+                        <Input value={eq.certificateNumber} onChange={v => updateEquipmentItem(i, { certificateNumber: v })} placeholder="e.g. WCC/2026/0147" />
+                      </Field>
+                      <Field label="Role in Test">
+                        <Input value={eq.roleInTest} onChange={v => updateEquipmentItem(i, { roleInTest: v })} placeholder="e.g. Max capacity load" />
+                      </Field>
+                    </div>
+                    {(eq.calibrationValidUntil && !eq.calibrationDate) || (eq.certificateNumber && !eq.calibrationDate) ? (
+                      <p className="mt-2 text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-sm px-2 py-1.5">
+                        Reference weights should carry a calibration certificate with a valid (unexpired) calibration date to be used as test loads.
+                      </p>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* STEP 3: Test Selection */}
+        {step === 3 && (
           <div>
             <h2 className="text-[15px] font-semibold text-gray-900 mb-1">Select Applicable Tests</h2>
             <p className="text-[12px] text-gray-500 mb-5">Choose which OIML R-76 tests to perform</p>
@@ -911,8 +1209,8 @@ export default function NewTestPage() {
           </div>
         )}
 
-        {/* STEP 3: Observations */}
-        {step === 3 && (
+        {/* STEP 4: Observations */}
+        {step === 4 && (
           <div>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
               <div>
@@ -1019,6 +1317,43 @@ export default function NewTestPage() {
                         placeholder="Notes for this test..."
                       />
                     </div>
+                    <div className="mt-3">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <span className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">Supporting Photographs</span>
+                        <label className="text-[10px] text-[#1e3a5f] hover:underline cursor-pointer font-medium">
+                          + Attach photos
+                          <input
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            className="hidden"
+                            onChange={e => {
+                              void attachPhotos(oi, e.target.files);
+                              e.target.value = '';
+                            }}
+                          />
+                        </label>
+                      </div>
+                      {obs.photos && obs.photos.length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                          {obs.photos.map((p, pi) => (
+                            <div key={`${p.name}-${pi}`} className="relative">
+                              <img src={p.src} alt={p.name} className="w-20 h-20 object-cover rounded-sm border border-gray-200" />
+                              <button
+                                type="button"
+                                onClick={() => removePhoto(oi, pi)}
+                                className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-600 text-white rounded-full text-[10px] leading-none cursor-pointer flex items-center justify-center shadow-sm"
+                                title={`Remove ${p.name}`}
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-[11px] text-gray-400">No photos attached. Photos are embedded in the downloaded report.</p>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1026,8 +1361,8 @@ export default function NewTestPage() {
           </div>
         )}
 
-        {/* STEP 4: Calculate */}
-        {step === 4 && (
+        {/* STEP 5: Calculate */}
+        {step === 5 && (
           <div>
             <h2 className="text-[15px] font-semibold text-gray-900 mb-1">Calculation & Compliance</h2>
             <p className="text-[12px] text-gray-500 mb-5">Review calculated results and compliance evaluation</p>
@@ -1122,8 +1457,8 @@ export default function NewTestPage() {
           </div>
         )}
 
-        {/* STEP 5: Result */}
-        {step === 5 && (
+        {/* STEP 6: Result */}
+        {step === 6 && (
           <div>
             <h2 className="text-[15px] font-semibold text-gray-900 mb-1">Test Report Summary</h2>
             <p className="text-[12px] text-gray-500 mb-5">Review the complete test record before submission</p>
@@ -1151,6 +1486,36 @@ export default function NewTestPage() {
                   <div><span className="text-gray-500">Laboratory:</span> <span className="text-gray-900">{conditions.laboratoryName || '—'}</span></div>
                 </div>
               </div>
+              {/* Equipment summary */}
+              {equipment.length > 0 && (
+                <div className="border border-gray-200 rounded-sm p-4">
+                  <h3 className="text-[13px] font-semibold text-gray-900 mb-2">Equipment & Calibration Weights</h3>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-[12px]">
+                      <thead>
+                        <tr className="border-b border-gray-200">
+                          <th className="text-left py-1.5 pr-3 font-semibold text-gray-700">Equipment</th>
+                          <th className="text-left py-1.5 pr-3 font-semibold text-gray-700">Type</th>
+                          <th className="text-left py-1.5 pr-3 font-semibold text-gray-700">Serial</th>
+                          <th className="text-left py-1.5 pr-3 font-semibold text-gray-700">Nominal</th>
+                          <th className="text-left py-1.5 pr-3 font-semibold text-gray-700">Cert. Valid Until</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {equipment.map(eq => (
+                          <tr key={eq.id} className="border-b border-gray-100">
+                            <td className="py-1.5 pr-3 font-medium text-gray-900">{eq.name || '—'}</td>
+                            <td className="py-1.5 pr-3 capitalize text-gray-600">{eq.type.replace(/-/g, ' ')}</td>
+                            <td className="py-1.5 pr-3 font-mono text-gray-700">{eq.serialNumber || '—'}</td>
+                            <td className="py-1.5 pr-3 font-mono text-gray-700">{eq.nominalValue ? `${eq.nominalValue} ${eq.nominalValueUnit}` : '—'}</td>
+                            <td className="py-1.5 pr-3 font-mono text-gray-700">{eq.calibrationValidUntil || '—'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
               {/* Results */}
               {calcResult && calcResult.length > 0 && (
                 <div className="border border-gray-200 rounded-sm p-4">
@@ -1209,6 +1574,31 @@ export default function NewTestPage() {
                   </div>
                 </div>
               )}
+
+              {/* Download report (draft preview from the current wizard state) */}
+              <div className="border border-gray-200 rounded-sm p-4">
+                <h3 className="text-[13px] font-semibold text-gray-900 mb-2">Generate Report</h3>
+                <p className="text-[12px] text-gray-500 mb-3">
+                  Download a printable certificate of the current test data. Equipment and observation photographs are embedded automatically.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => { const t = buildPreviewTest(); if (t) downloadTestReportPDF(t); }}
+                    className="px-4 py-2 bg-[#1e3a5f] hover:bg-[#162d4a] text-white text-[13px] font-medium rounded-sm inline-flex items-center gap-1.5 transition-colors shadow-xs"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
+                      <path d="M7 1.5v8m0 0L4 6.5m3 3l3-3M2 11.5h10" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    Download PDF
+                  </button>
+                  <button
+                    onClick={() => { const t = buildPreviewTest(); if (t) downloadTestReportDOCX(t); }}
+                    className="px-4 py-2 bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 text-[13px] font-medium rounded-sm transition-colors"
+                  >
+                    Download DOCX
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -1235,7 +1625,7 @@ export default function NewTestPage() {
               onClick={next}
               className="px-5 py-2 bg-[#1e3a5f] text-white text-[13px] font-medium rounded-sm hover:bg-[#162d4a] transition-colors"
             >
-              {step === 4 ? 'Calculate & Review' : 'Next'}
+              {step === 5 ? 'Calculate & Review' : 'Next'}
             </button>
           ) : (
             <button

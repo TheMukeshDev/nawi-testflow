@@ -17,6 +17,7 @@ import { Alert } from '@/components/ui/Alert';
 import { FieldSet } from '@/components/ui/FormControls';
 import { getCalibrationStatus, getCalibrationStatusConfig } from '@/components/forms/EquipmentForm';
 import { getEquipment, type EquipmentRecord } from '@/lib/equipment-catalog';
+import { supabaseDb } from '@/lib/supabase-db';
 
 // ============================================================================
 // HELPER COMPONENTS
@@ -51,7 +52,57 @@ function cn(...classes: (string | boolean | undefined | null)[]) {
 export default function EquipmentDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const { id } = React.use(params);
-  const equipment = getEquipment(id);
+  const [equipment, setEquipment] = React.useState<EquipmentRecord | null>(null);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      // Fast path: static catalog record
+      const catalog = getEquipment(id);
+      let found = catalog ?? null;
+      if (!found) {
+        // Fallback: live record from Supabase (test_equipment table)
+        const live = await supabaseDb.getEquipmentById(id);
+        if (!cancelled && live) {
+          found = {
+            id: live.id,
+            equipmentId: live.serialNumber || live.id,
+            name: live.name || '',
+            type: live.type || '',
+            manufacturer: live.manufacturer || '—',
+            model: live.model || '—',
+            serialNumber: live.serialNumber || '',
+            calibrationDate: live.calibrationDate || '',
+            calibrationValidUntil: live.calibrationValidUntil || '',
+            calibrationCertificateRef: live.certificateNumber || '',
+            laboratoryId: live.laboratoryId || '',
+            laboratoryCode: live.laboratoryCode || '',
+            laboratoryName: live.laboratoryName || '',
+            condition: live.condition || 'good',
+            notes: live.notes || '',
+            createdAt: live.createdAt || '',
+            updatedAt: live.updatedAt || '',
+          };
+        }
+      }
+      if (!cancelled) {
+        setEquipment(found);
+        setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [id]);
+
+  if (loading) {
+    return (
+      <Shell>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-[13px] text-gray-500">Loading equipment…</div>
+        </div>
+      </Shell>
+    );
+  }
 
   if (!equipment) {
     return (

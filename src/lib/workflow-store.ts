@@ -56,7 +56,9 @@ export interface StoredTest {
     verdict: 'PASS' | 'FAIL';
     unit: string;
     notes?: string;
+    photos?: ObservationPhoto[];
   }[];
+  equipment?: EquipmentRecord[];
   createdAt: string;
   lastUpdated: string;
   reviewNotes?: string;
@@ -85,6 +87,23 @@ export interface StoredReport {
   approvedAt?: string;
   approvedBy?: string;
   version: number;
+}
+
+export interface EquipmentRecord {
+  name: string;
+  type: 'standard-weight' | 'calibrated-weight' | 'accessory' | 'tool' | string;
+  serialNumber?: string;
+  nominalValue?: string;
+  nominalValueUnit?: string;
+  calibrationDate?: string;
+  calibrationValidUntil?: string;
+  certificateNumber?: string;
+  roleInTest?: string;
+}
+
+export interface ObservationPhoto {
+  name: string;
+  src: string;
 }
 
 export interface WorkflowHistoryEntry {
@@ -153,6 +172,7 @@ const SEED_TESTS: StoredTest[] = [
         notes: 'Center, Front, Back, Left, Right',
       },
     ],
+    equipment: [],
     createdAt: '2026-09-01T08:00:00Z',
     lastUpdated: '2026-09-02T14:30:00Z',
   },
@@ -179,6 +199,7 @@ const SEED_TESTS: StoredTest[] = [
     testLocation: 'Cleanroom Lab 2',
     testDate: '2026-09-01',
     observations: [],
+    equipment: [],
     createdAt: '2026-09-01T10:15:00Z',
     lastUpdated: '2026-09-02T11:15:00Z',
   },
@@ -217,6 +238,7 @@ const SEED_TESTS: StoredTest[] = [
         unit: 'g',
       },
     ],
+    equipment: [],
     createdAt: '2026-08-28T09:00:00Z',
     lastUpdated: '2026-09-01T10:00:00Z',
     reviewNotes: 'All readings are within OIML R-76 MPE limits. Verified and approved.',
@@ -256,6 +278,7 @@ const SEED_TESTS: StoredTest[] = [
         notes: 'Exceeded maximum permissible error of 1.0 kg at position 4',
       },
     ],
+    equipment: [],
     createdAt: '2026-08-27T14:00:00Z',
     lastUpdated: '2026-08-31T15:30:00Z',
     reviewNotes: 'Failed eccentricity test on corner point 4. Re-calibration recommended.',
@@ -427,7 +450,9 @@ export const workflowStore = {
       verdict: 'PASS' | 'FAIL';
       unit: string;
       notes?: string;
+      photos?: ObservationPhoto[];
     }[];
+    equipment?: EquipmentRecord[];
     technicianName?: string;
     /** Override the derived verdict (real compliance engine output). */
     complianceResult?: ComplianceVerdict;
@@ -466,6 +491,7 @@ export const workflowStore = {
       testLocation: input.conditions.testLocation || 'Main Laboratory',
       testDate: input.conditions.testDate || new Date().toISOString().slice(0, 10),
       observations: input.observations,
+      equipment: input.equipment ?? [],
       createdAt: new Date().toISOString(),
       lastUpdated: new Date().toISOString(),
     };
