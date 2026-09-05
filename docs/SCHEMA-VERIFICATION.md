@@ -1,4 +1,4 @@
-# NAWI TestFlow — Schema Verification
+# NAWI Sahayak — Schema Verification
 
 This document verifies that the database schema supports all required features.
 

@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: nawi-testflow-api
+    name: nawi-sahayak-api
     runtime: python
     rootDir: backend
     buildCommand: pip install -r requirements.txt
@@ -20,6 +20,6 @@ services:
       - key: JWT_EXPIRATION_MINUTES
         value: "60"
       - key: CORS_ORIGINS
-        value: '["https://nawi-testflow.vercel.app"]'
+        value: '["https://nawi-sahayak.vercel.app"]'
       - key: DATABASE_URL
         sync: false

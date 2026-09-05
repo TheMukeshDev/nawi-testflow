@@ -1,5 +1,5 @@
 """
-NAWI TestFlow — Admin Routes
+NAWI Sahayak — Admin Routes
 
 System administration and audit log endpoints.
 Requires admin role for all endpoints.

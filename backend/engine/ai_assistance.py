@@ -1,5 +1,5 @@
 """
-NAWI TestFlow — AI Assistance Service
+NAWI Sahayak — AI Assistance Service
 
 Optional AI-powered assistance for explaining results, summarizing reports,
 and extracting document metadata.

@@ -1,5 +1,5 @@
 """
-NAWI TestFlow — API Dependencies
+NAWI Sahayak — API Dependencies
 
 Dependency injection for FastAPI routes.
 """

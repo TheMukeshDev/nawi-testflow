@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — Badge Component v2
+ * NAWI Sahayak — Badge Component v2
  *
  * Used for:
  * - Test status indicators

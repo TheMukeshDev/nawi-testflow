@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — Route Guard Component
+ * NAWI Sahayak — Route Guard Component
  *
  * Protects pages based on user role.
  * Shows access denied message if user doesn't have required role.

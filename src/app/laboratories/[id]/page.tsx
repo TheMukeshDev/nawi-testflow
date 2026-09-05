@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — Laboratory Detail Page
+ * NAWI Sahayak — Laboratory Detail Page
  *
  * View laboratory details, instruments, and active tests.
  */

@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — Cryptographic Hash & Verification QR Code Generator
+ * NAWI Sahayak — Cryptographic Hash & Verification QR Code Generator
  *
  * Provides:
  * 1. Deterministic SHA-256 metrological hash calculation
@@ -14,7 +14,7 @@ import type { StoredTest } from './workflow-store';
 import QRCode from 'qrcode';
 
 /** Production origin used when the app is rendered outside a browser context. */
-const PROD_ORIGIN = 'https://nawi-testflow.vercel.app';
+const PROD_ORIGIN = 'https://nawi-sahayak.vercel.app';
 
 /** Maximum serialized URL length kept inside a certificate QR (keeps module count scannable). */
 const MAX_QR_URL_LENGTH = 850;

@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — Equipment Form
+ * NAWI Sahayak — Equipment Form
  *
  * Form for registering and editing test equipment.
  * Includes:

@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — Sidebar Component v4
+ * NAWI Sahayak — Sidebar Component v4
  *
  * Role-based persistent left navigation. Desktop-primary, always visible.
  *
@@ -191,7 +191,7 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
         {!collapsed && (
           <div className="flex flex-col min-w-0">
             <span className="text-[13px] font-semibold text-white leading-tight truncate tracking-tight">
-              NAWI TestFlow
+              NAWI Sahayak
             </span>
             <span className="text-[10px] text-gray-400 leading-tight tracking-wide">
               OIML R-76 Suite

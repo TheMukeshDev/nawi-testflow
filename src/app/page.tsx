@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — Public Home Page
+ * NAWI Sahayak — Public Home Page
  *
  * Professional landing page for the NAWI OIML R-76 Test Report Management System.
  * Responsive across all breakpoints. No gradients, no glassmorphism, no neon.
@@ -237,7 +237,7 @@ function About() {
           </p>
           <p className="text-[14px] sm:text-[15px] text-gray-600 leading-relaxed">
             Traditionally, this workflow is managed through paper-based records and manual
-            calculations. NAWI TestFlow digitizes the entire process — from instrument registration
+            calculations. NAWI Sahayak digitizes the entire process — from instrument registration
             through test observation, automated calculation, compliance evaluation, review, and
             final report generation — while maintaining a complete audit trail and supporting
             future OIML recommendation updates.
@@ -418,7 +418,7 @@ function ReportPreview() {
                 <div className="w-[24px] h-[24px] bg-[#1e3a5f] rounded-sm flex items-center justify-center">
                   <span className="text-white text-[8px] font-bold">NW</span>
                 </div>
-                <span className="text-[12px] font-semibold text-gray-900">NAWI TestFlow</span>
+                <span className="text-[12px] font-semibold text-gray-900">NAWI Sahayak</span>
               </div>
               <span className="text-[11px] font-mono text-gray-500">TR-2026-001</span>
             </div>
@@ -520,7 +520,7 @@ function Footer() {
               <div className="w-[24px] h-[24px] bg-[#1e3a5f] rounded-sm flex items-center justify-center">
                 <span className="text-white text-[8px] font-bold">NW</span>
               </div>
-              <span className="text-[13px] font-bold text-gray-900">NAWI TestFlow</span>
+              <span className="text-[13px] font-bold text-gray-900">NAWI Sahayak</span>
             </div>
             <p className="text-[11px] text-gray-500 leading-relaxed">
               OIML R-76 Test Report Management System for Non-Automatic Weighing Instruments.
@@ -558,7 +558,7 @@ function Footer() {
         <div className="border-t border-gray-200 pt-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <p className="text-[11px] text-gray-400">
-              &copy; 2026 NAWI TestFlow. Smart India Hackathon Project.
+              &copy; 2026 NAWI Sahayak. Smart India Hackathon Project.
             </p>
             <p className="text-[10px] text-gray-400">
               This is a software prototype for SIH and must be validated against authoritative requirements before regulatory production use.

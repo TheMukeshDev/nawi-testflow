@@ -1,5 +1,5 @@
 """
-NAWI TestFlow — FastAPI Application
+NAWI Sahayak — FastAPI Application
 
 Main application entry point with:
 - CORS configuration
@@ -123,8 +123,8 @@ async def root_home():
       <a class="ghost" href="/api/health">Health Check</a>
     </div>
     <div class="meta">
-      Source: <a href="https://github.com/TheMukeshDev/nawi-testflow" style="color:#1e3a5f;">github.com/TheMukeshDev/nawi-testflow</a><br/>
-      Live frontend: <a href="https://nawi-testflow.vercel.app" style="color:#1e3a5f;">nawi-testflow.vercel.app</a>
+      Source: <a href="https://github.com/TheMukeshDev/nawi-sahayak" style="color:#1e3a5f;">github.com/TheMukeshDev/nawi-sahayak</a><br/>
+      Live frontend: <a href="https://nawi-sahayak.vercel.app" style="color:#1e3a5f;">nawi-sahayak.vercel.app</a>
     </div>
   </div>
 </body>

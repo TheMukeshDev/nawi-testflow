@@ -1,5 +1,5 @@
 """
-NAWI TestFlow — Rule-Based Explainer (deterministic, zero AI cost).
+NAWI Sahayak — Rule-Based Explainer (deterministic, zero AI cost).
 
 This module is the FIRST layer of user-facing explanations. It uses ONLY
 the authoritative compliance engine outputs (ComplianceDecision,

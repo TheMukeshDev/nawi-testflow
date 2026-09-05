@@ -1,7 +1,7 @@
 /**
- * NAWI TestFlow — Department of Consumer Affairs (DoCA) e-Maap Gateway
+ * NAWI Sahayak — Department of Consumer Affairs (DoCA) e-Maap Gateway
  *
- * Mock interoperability module connecting NAWI TestFlow with the
+ * Mock interoperability module connecting NAWI Sahayak with the
  * Ministry of Consumer Affairs National Legal Metrology Portal (e-Maap).
  */
 

@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — Supabase Unified Database Client
+ * NAWI Sahayak — Supabase Unified Database Client
  *
  * Provides persistent database access through secure Next.js API routes
  * with local cache fallback, ensuring data remains intact on page refreshes.

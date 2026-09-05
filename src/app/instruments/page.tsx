@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — Instruments List Page
+ * NAWI Sahayak — Instruments List Page
  *
  * Main view for managing instruments.
  * Features:

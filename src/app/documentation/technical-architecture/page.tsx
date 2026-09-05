@@ -5,10 +5,10 @@ import { DocLayout, DocSection as Section, DocSubSection as SubSection, DocTable
 
 export default function TechnicalArchitecturePage() {
   return (
-    <DocLayout title="Technical Architecture" subtitle="Complete technical documentation of the NAWI TestFlow system design, implementation, and deployment.">
+    <DocLayout title="Technical Architecture" subtitle="Complete technical documentation of the NAWI Sahayak system design, implementation, and deployment.">
 
       <Section id="system-overview" title="System Overview">
-        <p>NAWI TestFlow is a web-based application for managing Non-Automatic Weighing Instrument (NAWI) test reports as per OIML Recommendation R-76. It provides a complete digital workflow from instrument registration through test observation, calculation, compliance evaluation, review, and report generation.</p>
+        <p>NAWI Sahayak is a web-based application for managing Non-Automatic Weighing Instrument (NAWI) test reports as per OIML Recommendation R-76. It provides a complete digital workflow from instrument registration through test observation, calculation, compliance evaluation, review, and report generation.</p>
         <Callout type="note" title="Architecture Principle">All regulatory calculations and compliance determinations are performed by deterministic backend engines. AI is optional assistance only and never determines compliance.</Callout>
       </Section>
 

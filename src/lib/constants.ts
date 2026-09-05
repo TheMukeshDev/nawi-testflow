@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — Visual Constants
+ * NAWI Sahayak — Visual Constants
  *
  * Maps domain types to their visual representations.
  * Single source of truth for status colors, labels, and configurations.

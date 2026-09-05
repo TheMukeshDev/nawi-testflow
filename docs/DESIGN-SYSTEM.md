@@ -1,4 +1,4 @@
-# NAWI TestFlow — Design System Specification
+# NAWI Sahayak — Design System Specification
 
 **Version:** 2.0
 **Purpose:** Professional laboratory/regulatory software for OIML R-76 NAWI testing

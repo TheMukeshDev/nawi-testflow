@@ -1,4 +1,4 @@
-# NAWI TestFlow — Demonstration Data
+# NAWI Sahayak — Demonstration Data
 
 ## ⚠️ IMPORTANT NOTICE
 
@@ -13,7 +13,7 @@
 
 ## Purpose
 
-This demonstration data showcases the NAWI TestFlow application capabilities
+This demonstration data showcases the NAWI Sahayak application capabilities
 for the Smart India Hackathon (SIH) presentation. It demonstrates:
 
 1. Instrument registration
@@ -54,5 +54,5 @@ python -m demo.run_demo
 
 This demonstration data is provided "as is" for educational and presentation
 purposes only. It does not represent actual test results, regulatory compliance,
-or official laboratory data. The NAWI TestFlow application is designed to
+or official laboratory data. The NAWI Sahayak application is designed to
 process real OIML R-76 test data, but this demo uses synthetic data only.

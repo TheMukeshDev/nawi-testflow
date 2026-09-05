@@ -1,5 +1,5 @@
 """
-NAWI TestFlow — Authentication Routes
+NAWI Sahayak — Authentication Routes
 
 Handles user authentication via Supabase Auth.
 """

@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — Admin Dashboard
+ * NAWI Sahayak — Admin Dashboard
  *
  * System overview for administrators.
  * Shows total reports, system metrics, recent activity.

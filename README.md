@@ -8,7 +8,7 @@ Development of a Software Program/Application for Generation of Test Reports for
 
 ## About
 
-NAWI TestFlow is a digital platform for recording Non-Automatic Weighing Instrument test observations, performing configured OIML R-76-based calculations and compliance evaluation, and generating standardized test reports.
+NAWI Sahayak is a digital platform for recording Non-Automatic Weighing Instrument test observations, performing configured OIML R-76-based calculations and compliance evaluation, and generating standardized test reports.
 
 The application replaces manual paper-based test report generation with a structured digital workflow covering instrument registration, test observation entry, automated calculation, compliance evaluation, report generation, and archival.
 
@@ -27,7 +27,7 @@ This leads to inconsistent report formats, manual calculation errors, difficulty
 
 ## Solution
 
-NAWI TestFlow provides a structured digital workflow:
+NAWI Sahayak provides a structured digital workflow:
 
 ```
 Instrument Data
@@ -163,7 +163,7 @@ The documentation includes searchable content, sidebar navigation, and is respon
 ## Project Structure
 
 ```
-nawi-testflow/
+nawi-sahayak/
 ├── src/                          # Next.js frontend
 │   ├── app/                      # Next.js App Router pages
 │   │   ├── page.tsx              # Landing page
@@ -384,7 +384,7 @@ Two Vercel projects share this repo (each auto-deploys on push to `master`).
 |----------|----------|---------|
 | `SUPABASE_URL` | Yes | Supabase project URL |
 | `SUPABASE_SERVICE_ROLE_KEY` | Yes | Server-side data access (never expose to browser) |
-| `CORS_ORIGINS` | Yes | Comma-separated frontend origins, e.g. `https://nawi-testflow.vercel.app` (browsers block the API otherwise) |
+| `CORS_ORIGINS` | Yes | Comma-separated frontend origins, e.g. `https://nawi-sahayak.vercel.app` (browsers block the API otherwise) |
 | `JWT_SECRET` | Yes | Change from default in production |
 | `GEMINI_API_KEY` | Optional | Enables on-demand "Enhance with AI" (also settable from Settings UI) |
 | `GEMINI_MODEL` | Optional | Default `gemini-3.8-flash` |

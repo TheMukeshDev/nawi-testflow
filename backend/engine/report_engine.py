@@ -1,5 +1,5 @@
 """
-NAWI TestFlow — Report Generation Engine
+NAWI Sahayak — Report Generation Engine
 
 Main entry point for report generation.
 Orchestrates PDF and DOCX generation with snapshot-based reproducibility.

@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — Catalog Database Client
+ * NAWI Sahayak — Catalog Database Client
  *
  * Fetches real records from Supabase (via the /api/db proxy) and joins the
  * normalized tables (instruments + instrument_models + manufacturers +

@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — Next.js Proxy (formerly Middleware)
+ * NAWI Sahayak — Next.js Proxy (formerly Middleware)
  *
  * This proxy is intentionally minimal.
  * All authentication and authorization is handled client-side

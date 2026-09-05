@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — MetricCard
+ * NAWI Sahayak — MetricCard
  *
  * Shared KPI card used across all dashboards. Optional leading icon tile,
  * accent-tinted top border, and an optional hint line. Design-system

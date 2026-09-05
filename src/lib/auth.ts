@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — Authentication Utilities
+ * NAWI Sahayak — Authentication Utilities
  *
  * Frontend authentication helpers and route guards.
  *

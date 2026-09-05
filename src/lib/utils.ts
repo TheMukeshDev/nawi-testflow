@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — Utility Functions
+ * NAWI Sahayak — Utility Functions
  *
  * Pure utility functions used across the application.
  * No side effects, no React dependencies.

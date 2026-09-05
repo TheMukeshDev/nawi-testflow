@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — About Page
+ * NAWI Sahayak — About Page
  *
  * Provides information about the system.
  * Professional, technical documentation style.
@@ -18,7 +18,7 @@ export default function AboutPage() {
               <span className="text-white text-[11px] font-bold">NW</span>
             </div>
             <span className="text-[14px] font-semibold text-gray-900">
-              NAWI TestFlow
+              NAWI Sahayak
             </span>
           </Link>
           <nav className="flex items-center gap-4">
@@ -38,7 +38,7 @@ export default function AboutPage() {
       {/* ── Content ── */}
       <main className="max-w-[800px] mx-auto px-6 py-12">
         <h1 className="text-[24px] font-bold text-gray-900 mb-6">
-          About NAWI TestFlow
+          About NAWI Sahayak
         </h1>
 
         <section className="mb-8">
@@ -46,7 +46,7 @@ export default function AboutPage() {
             Purpose
           </h2>
           <p className="text-[14px] text-gray-700 leading-relaxed mb-4">
-            NAWI TestFlow is a digital platform designed for testing laboratories
+            NAWI Sahayak is a digital platform designed for testing laboratories
             that perform verification of Non-Automatic Weighing Instruments (NAWI)
             as per OIML Recommendation R-76.
           </p>

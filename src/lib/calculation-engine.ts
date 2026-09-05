@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — Calculation Engine
+ * NAWI Sahayak — Calculation Engine
  *
  * Client-side OIML R-76 calculation + compliance evaluation. Consumes limits
  * resolved by `rule-engine.ts` (DB-backed + versioned with inline defaults).

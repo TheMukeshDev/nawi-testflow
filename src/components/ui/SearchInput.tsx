@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — SearchInput
+ * NAWI Sahayak — SearchInput
  *
  * Shared, project-styled search box used on every dashboard / repository page.
  * Keeps the magnifier + clear-button affordance consistent across roles.

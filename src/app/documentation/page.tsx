@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — Documentation Center
+ * NAWI Sahayak — Documentation Center
  *
  * Landing page for the documentation center with three major sections:
  * Technical Architecture, User Guide, OIML R-76 Reference.
@@ -108,7 +108,7 @@ export default function DocumentationPage() {
 
       {/* Version Info */}
       <div className="mt-6 text-[11px] text-gray-400">
-        Documentation for NAWI TestFlow v0.1.0-mvp. All information reflects the current MVP implementation.
+        Documentation for NAWI Sahayak v0.1.0-mvp. All information reflects the current MVP implementation.
       </div>
     </DocLayout>
   );

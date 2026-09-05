@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — Instrument Detail Page
+ * NAWI Sahayak — Instrument Detail Page
  *
  * View instrument details, specifications, and test history.
  * Features:

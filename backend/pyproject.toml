@@ -1,5 +1,5 @@
 [project]
-name = "nawi-testflow-backend"
+name = "nawi-sahayak-backend"
 version = "1.0.0"
 description = "OIML R-76 NAWI Test Report Generation System"
 requires-python = ">=3.12,<3.13"

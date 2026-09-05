@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — Viewer Dashboard
+ * NAWI Sahayak — Viewer Dashboard
  *
  * Read-only interface for searching and inspecting finalized test certificates.
  */

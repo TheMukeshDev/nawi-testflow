@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — New Laboratory Page
+ * NAWI Sahayak — New Laboratory Page
  *
  * Form for registering a new laboratory.
  */

@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — Admin Settings
+ * NAWI Sahayak — Admin Settings
  *
  * System configuration for administrators.
  * Includes editable system settings, rule versions, and demo data management.

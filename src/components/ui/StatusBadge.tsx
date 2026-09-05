@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — Status Badge Component v2
+ * NAWI Sahayak — Status Badge Component v2
  *
  * Maps domain types to visual configurations automatically.
  * Use these instead of raw Badge for consistent status display.

@@ -1,5 +1,5 @@
 -- ============================================================================
--- NAWI TestFlow — Row-Level Security Policies
+-- NAWI Sahayak — Row-Level Security Policies
 -- Standard: OIML R-76 — Non-Automatic Weighing Instruments
 -- Database: PostgreSQL 16+ with Supabase
 -- ============================================================================

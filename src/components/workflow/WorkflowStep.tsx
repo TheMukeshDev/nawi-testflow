@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — Workflow Step Indicator
+ * NAWI Sahayak — Workflow Step Indicator
  *
  * Visual indicator showing progress through the test report workflow.
  * Displays current step, completed steps, and remaining steps.

@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — Core Domain Types
+ * NAWI Sahayak — Core Domain Types
  *
  * Based on OIML R-76 requirements for Non-Automatic Weighing Instruments.
  * These types define the domain model and are the source of truth

@@ -1,5 +1,5 @@
 """
-NAWI TestFlow — Compliance Evaluator Tests
+NAWI Sahayak — Compliance Evaluator Tests
 
 Comprehensive tests for the deterministic compliance evaluation engine.
 

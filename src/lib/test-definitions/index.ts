@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — Test Definition Configuration Layer
+ * NAWI Sahayak — Test Definition Configuration Layer
  *
  * This module defines the structure and configuration for all tests
  * available in the system. Tests are configured here, not hardcoded

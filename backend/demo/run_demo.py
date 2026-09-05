@@ -1,5 +1,5 @@
 """
-NAWI TestFlow -- Demonstration Runner
+NAWI Sahayak -- Demonstration Runner
 
 Executes the complete workflow demonstration:
 1. Instrument entry
@@ -124,7 +124,7 @@ def run_demo():
     """Execute the complete demonstration workflow."""
     print("\n" + "#" * 72)
     print("#" + " " * 70 + "#")
-    print("#  NAWI TestFlow -- Complete Workflow Demonstration" + " " * 20 + "#")
+    print("#  NAWI Sahayak -- Complete Workflow Demonstration" + " " * 20 + "#")
     print("#  Smart India Hackathon (SIH) -- Problem Statement 26035" + " " * 14 + "#")
     # NOTE: All data below is fictional and for demonstration only
     print("#" + " " * 70 + "#")

@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — Gmail SMTP Email Service
+ * NAWI Sahayak — Gmail SMTP Email Service
  *
  * Dispatches transactional emails via Gmail SMTP:
  * 1. Password Reset Link with secure one-time tokens
@@ -12,7 +12,7 @@ const SMTP_EMAIL = process.env.SMTP_EMAIL || 'itzcodermukesh@gmail.com';
 const SMTP_PASSWORD = process.env.SMTP_PASSWORD || 'hkvxqmsupcmvinbz';
 const SMTP_HOST = process.env.SMTP_HOST || 'smtp.gmail.com';
 const SMTP_PORT = Number(process.env.SMTP_PORT) || 465;
-const SMTP_FROM_NAME = process.env.SMTP_FROM_NAME || 'NAWI TestFlow National Portal';
+const SMTP_FROM_NAME = process.env.SMTP_FROM_NAME || 'NAWI Sahayak National Portal';
 
 export function getEmailTransporter() {
   return nodemailer.createTransport({
@@ -53,12 +53,12 @@ export async function sendPasswordResetEmail(toEmail: string, resetLink: string,
     <body>
       <div class="container">
         <div class="header">
-          <h1>NAWI TestFlow</h1>
+          <h1>NAWI Sahayak</h1>
           <p>National Legal Metrology Portal &middot; OIML R-76</p>
         </div>
         <div class="body">
           <p>Dear <strong>${userName}</strong>,</p>
-          <p>We received a request to reset the password for your NAWI TestFlow laboratory account associated with <code>${toEmail}</code>.</p>
+          <p>We received a request to reset the password for your NAWI Sahayak laboratory account associated with <code>${toEmail}</code>.</p>
           <p>Click the secure button below to choose a new password:</p>
           
           <div style="text-align: center;">
@@ -73,7 +73,7 @@ export async function sendPasswordResetEmail(toEmail: string, resetLink: string,
           <div class="token-box">${resetLink}</div>
         </div>
         <div class="footer">
-          NAWI TestFlow &bull; Smart India Hackathon 2026 &bull; Department of Consumer Affairs<br>
+          NAWI Sahayak &bull; Smart India Hackathon 2026 &bull; Department of Consumer Affairs<br>
           This is an automated system email. Please do not reply.
         </div>
       </div>
@@ -84,7 +84,7 @@ export async function sendPasswordResetEmail(toEmail: string, resetLink: string,
   return transporter.sendMail({
     from: `"${SMTP_FROM_NAME}" <${SMTP_EMAIL}>`,
     to: toEmail,
-    subject: 'Password Reset Request — NAWI TestFlow',
+    subject: 'Password Reset Request — NAWI Sahayak',
     html,
   });
 }
@@ -98,7 +98,7 @@ export async function sendWelcomeUserEmail(
   tempPassword: string,
   role: string,
   laboratory: string,
-  loginUrl = 'https://nawi-testflow.vercel.app/login'
+  loginUrl = 'https://nawi-sahayak.vercel.app/login'
 ) {
   const transporter = getEmailTransporter();
 
@@ -126,12 +126,12 @@ export async function sendWelcomeUserEmail(
     <body>
       <div class="container">
         <div class="header">
-          <h1>Welcome to NAWI TestFlow</h1>
+          <h1>Welcome to NAWI Sahayak</h1>
           <p>OIML R-76 Laboratory Metrology System</p>
         </div>
         <div class="body">
           <p>Hello <strong>${userName}</strong>,</p>
-          <p>An administrator has created a new account for you on the <strong>NAWI TestFlow</strong> National Legal Metrology portal. Here are your access credentials:</p>
+          <p>An administrator has created a new account for you on the <strong>NAWI Sahayak</strong> National Legal Metrology portal. Here are your access credentials:</p>
           
           <div class="cred-card">
             <div class="cred-row">
@@ -161,7 +161,7 @@ export async function sendWelcomeUserEmail(
           </p>
         </div>
         <div class="footer">
-          NAWI TestFlow &bull; Ministry of Consumer Affairs, Food &amp; Public Distribution<br>
+          NAWI Sahayak &bull; Ministry of Consumer Affairs, Food &amp; Public Distribution<br>
           Official Laboratory Portal &bull; ISO/IEC 17025 Compliant
         </div>
       </div>
@@ -172,7 +172,7 @@ export async function sendWelcomeUserEmail(
   return transporter.sendMail({
     from: `"${SMTP_FROM_NAME}" <${SMTP_EMAIL}>`,
     to: toEmail,
-    subject: 'Your Account Credentials — NAWI TestFlow Portal',
+    subject: 'Your Account Credentials — NAWI Sahayak Portal',
     html,
   });
 }

@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — Report Generator & Downloader
+ * NAWI Sahayak — Report Generator & Downloader
  *
  * Client-side generation of standardized OIML R-76 test reports.
  * Supports:
@@ -193,7 +193,7 @@ function generateReportHTML(test: StoredTest, report?: StoredReport, qrText?: st
   const verifyBase =
     typeof window !== 'undefined' && window.location?.origin
       ? window.location.origin
-      : 'https://nawi-testflow.vercel.app';
+      : 'https://nawi-sahayak.vercel.app';
   const certificateQrText = qrText || `${verifyBase}/verify/${encodeURIComponent(test.testNumber)}`;
 
   return `
@@ -579,7 +579,7 @@ function generateReportHTML(test: StoredTest, report?: StoredReport, qrText?: st
 
       <div class="seal-tag">
         <strong>TAMPER-PROOF METROLOGY LEDGER:</strong> Digitally Signed &amp; Timestamped per Indian IT Act &amp; Legal Metrology Rules.<br />
-        Public QR Verification URL: <code>https://nawi-testflow.vercel.app/verify/${test.testNumber}</code> &bull; Valid without physical seal.
+        Public QR Verification URL: <code>https://nawi-sahayak.vercel.app/verify/${test.testNumber}</code> &bull; Valid without physical seal.
       </div>
     </body>
     </html>

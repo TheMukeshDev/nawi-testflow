@@ -1,5 +1,5 @@
 """
-NAWI TestFlow — Versioned Regulatory-Rule Architecture
+NAWI Sahayak — Versioned Regulatory-Rule Architecture
 
 Supports future updates to OIML recommendations while preserving
 historical report integrity.

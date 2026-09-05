@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — PKI Digital Signature (Class-3 DSC) Simulation
+ * NAWI Sahayak — PKI Digital Signature (Class-3 DSC) Simulation
  *
  * Implements digital signature simulation adhering to:
  * - Indian Information Technology (IT) Act, 2000

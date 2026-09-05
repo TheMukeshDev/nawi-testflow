@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — Offline-First PWA Sync Service
+ * NAWI Sahayak — Offline-First PWA Sync Service
  *
  * Provides real-time connectivity detection, local observation persistence,
  * and automatic synchronization with the backend when connection is restored.

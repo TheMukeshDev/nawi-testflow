@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — Alert Component v2
+ * NAWI Sahayak — Alert Component v2
  *
  * Inline alerts for system messages and warnings.
  * Not decorative — always conveys actionable information.

@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — Laboratory Registry
+ * NAWI Sahayak — Laboratory Registry
  *
  * Canonical mapping between laboratory codes (e.g. `CMTL-PY-01`) and their full
  * display names (e.g. `Central Metrology Testing Lab`).

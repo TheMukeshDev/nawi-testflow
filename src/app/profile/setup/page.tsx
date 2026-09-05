@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — Profile Setup Page
+ * NAWI Sahayak — Profile Setup Page
  *
  * For first-time users who need to complete their profile.
  * Collects role/organization information before allowing access.

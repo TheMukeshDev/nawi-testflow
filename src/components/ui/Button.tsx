@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — Button Component v2
+ * NAWI Sahayak — Button Component v2
  *
  * Variants:
  * - primary: Blue, for main actions (Save, Submit, Create)

@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — AI / explanation client helpers.
+ * NAWI Sahayak — AI / explanation client helpers.
  *
  * Deterministic rule-based explanation helpers used by the current MVP.
  * Gemini integration remains isolated here for future scope and is not exposed

@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — PageHeader Component v2
+ * NAWI Sahayak — PageHeader Component v2
  *
  * Consistent page header for all views.
  * Contains: Title, subtitle, action buttons, optional metadata row

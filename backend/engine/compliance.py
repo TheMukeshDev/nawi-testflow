@@ -1,5 +1,5 @@
 """
-NAWI TestFlow — Compliance Evaluation Engine
+NAWI Sahayak — Compliance Evaluation Engine
 
 Deterministic, versioned compliance evaluation for OIML R-76 tests.
 

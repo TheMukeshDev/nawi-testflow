@@ -1,5 +1,5 @@
 """
-NAWI TestFlow — Rules Module Tests
+NAWI Sahayak — Rules Module Tests
 
 Tests for rule store and rule resolver.
 Verifies that rules are correctly resolved and that

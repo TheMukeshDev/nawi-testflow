@@ -5,7 +5,7 @@ import { DocLayout, Callout, CodeBlock, DocSection, DocSubSection, DocTable } fr
 
 export default function OIMLR76ReferencePage() {
   return (
-    <DocLayout title="OIML R-76 Reference" subtitle="Reference information on how test procedures, calculations and compliance rules are represented in the NAWI TestFlow application.">
+    <DocLayout title="OIML R-76 Reference" subtitle="Reference information on how test procedures, calculations and compliance rules are represented in the NAWI Sahayak application.">
       <Callout type="danger" title="DEMO RULES — NOT FOR REGULATORY USE">
         <strong>Methodology: official.</strong> This project implements the official OIML R-76 test procedures and compliance-evaluation methodology (repeatability, eccentricity, linearity, discrimination and stability), including versioned rule handling.
         <br /><br />

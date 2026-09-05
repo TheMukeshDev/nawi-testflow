@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — Edit Instrument Page
+ * NAWI Sahayak — Edit Instrument Page
  *
  * Form for editing an existing instrument.
  * Pre-fills form with current instrument data.

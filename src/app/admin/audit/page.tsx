@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — Audit Log
+ * NAWI Sahayak — Audit Log
  *
  * System activity log for administrators.
  * Tracks all significant actions for auditability.

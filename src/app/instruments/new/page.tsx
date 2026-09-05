@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — New Instrument Page
+ * NAWI Sahayak — New Instrument Page
  *
  * Form for registering a new instrument.
  * Includes manufacturer selection, model specification, and duplicate prevention.

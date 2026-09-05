@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — Shell Layout v2
+ * NAWI Sahayak — Shell Layout v2
  *
  * Delegates to DashboardLayout for consistent auth, mobile nav, and layout.
  */

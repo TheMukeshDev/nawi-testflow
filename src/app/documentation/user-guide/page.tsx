@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — User Guide
+ * NAWI Sahayak — User Guide
  *
  * Role-based user instructions for operating the system.
  * Covers Tester, Reviewer, Administrator, and Viewer workflows.
@@ -94,7 +94,7 @@ export default function UserGuidePage() {
   return (
     <DocLayout
       title="User Guide"
-      subtitle="Step-by-step instructions for operating the NAWI TestFlow system. Select your role below."
+      subtitle="Step-by-step instructions for operating the NAWI Sahayak system. Select your role below."
     >
       {/* ── Role Tabs ── */}
       <div className="flex gap-1 mb-6 border-b border-gray-200">

@@ -1,5 +1,5 @@
 """
-NAWI TestFlow — Equipment Routes
+NAWI Sahayak — Equipment Routes
 
 CRUD operations for equipment registry.
 """

@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — Equipment List Page
+ * NAWI Sahayak — Equipment List Page
  *
  * Main view for managing test equipment.
  * Features:

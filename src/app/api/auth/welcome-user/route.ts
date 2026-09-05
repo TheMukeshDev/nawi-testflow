@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Email, full name, and password are required' }, { status: 400 });
     }
 
-    const host = request.headers.get('host') || 'nawi-testflow.vercel.app';
+    const host = request.headers.get('host') || 'nawi-sahayak.vercel.app';
     const protocol = host.includes('localhost') ? 'http' : 'https';
     const loginUrl = `${protocol}://${host}/login`;
 

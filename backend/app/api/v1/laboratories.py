@@ -1,5 +1,5 @@
 """
-NAWI TestFlow — Laboratories Routes
+NAWI Sahayak — Laboratories Routes
 
 CRUD operations for laboratory management.
 """

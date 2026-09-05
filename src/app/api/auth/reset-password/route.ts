@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Valid email address is required' }, { status: 400 });
     }
 
-    const host = request.headers.get('host') || 'nawi-testflow.vercel.app';
+    const host = request.headers.get('host') || 'nawi-sahayak.vercel.app';
     const protocol = host.includes('localhost') ? 'http' : 'https';
 
     // Generate secure random reset token

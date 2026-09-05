@@ -1,5 +1,5 @@
 -- ============================================================================
--- NAWI TestFlow — Initial Schema Migration
+-- NAWI Sahayak — Initial Schema Migration
 -- Standard: OIML R-76 — Non-Automatic Weighing Instruments
 -- Database: PostgreSQL 16+
 -- ============================================================================

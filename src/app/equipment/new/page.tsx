@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — New Equipment Page
+ * NAWI Sahayak — New Equipment Page
  *
  * Form for registering new test equipment.
  */

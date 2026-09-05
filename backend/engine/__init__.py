@@ -1,5 +1,5 @@
 """
-NAWI TestFlow — Calculation Engine
+NAWI Sahayak — Calculation Engine
 
 Standalone Python calculation and validation engine for OIML R-76.
 Completely independent from UI and HTTP layer.

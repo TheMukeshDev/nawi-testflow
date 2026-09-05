@@ -1,5 +1,5 @@
 """
-NAWI TestFlow — Rule Resolver Module
+NAWI Sahayak — Rule Resolver Module
 
 Resolves applicable compliance rules for test calculations.
 Rules are loaded from a rule store (database, file, or in-memory).

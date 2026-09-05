@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
     // 4. Send welcome email with credentials
     if (sendEmail) {
       try {
-        const host = request.headers.get('host') || 'nawi-testflow.vercel.app';
+        const host = request.headers.get('host') || 'nawi-sahayak.vercel.app';
         const protocol = host.includes('localhost') ? 'http' : 'https';
         const loginUrl = `${protocol}://${host}/login`;
         await sendWelcomeUserEmail(email, fullName, tempPassword, role, laboratory || '', loginUrl);

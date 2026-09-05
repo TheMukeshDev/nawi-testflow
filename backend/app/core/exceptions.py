@@ -1,5 +1,5 @@
 """
-NAWI TestFlow — Custom Exceptions
+NAWI Sahayak — Custom Exceptions
 
 Application-specific exceptions for error handling.
 """

@@ -1,4 +1,4 @@
-# NAWI TestFlow — Production Architecture
+# NAWI Sahayak — Production Architecture
 
 **Version:** 1.0
 **Stack:** Next.js + FastAPI + PostgreSQL/Supabase

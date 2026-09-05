@@ -1,5 +1,5 @@
 """
-NAWI TestFlow — Audit Service
+NAWI Sahayak — Audit Service
 
 Logs all system actions for traceability and compliance.
 Every mutation creates an audit log entry.

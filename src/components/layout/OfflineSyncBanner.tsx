@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — Offline Sync Banner Component
+ * NAWI Sahayak — Offline Sync Banner Component
  *
  * Appears when network connection drops, assuring laboratory officers that
  * test observations are persisted in local storage and will sync automatically.

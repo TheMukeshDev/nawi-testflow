@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — Rule Engine (DB-backed, versioned OIML R-76)
+ * NAWI Sahayak — Rule Engine (DB-backed, versioned OIML R-76)
  *
  * Loads compliance rules from the `compliance_rules` table via the /api/db
  * proxy and resolves applicable limits for calculations/compliance.

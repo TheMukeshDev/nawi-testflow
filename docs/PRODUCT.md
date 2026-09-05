@@ -1,4 +1,4 @@
-# NAWI TestFlow — Product Planning Document
+# NAWI Sahayak — Product Planning Document
 
 **Project:** Smart India Hackathon 2026 — Problem Statement 26035
 **Standard:** OIML Recommendation R-76 — Non-Automatic Weighing Instruments
@@ -11,7 +11,7 @@
 
 ### 1.1 What We Are Building
 
-NAWI TestFlow is a laboratory software application that digitizes the complete lifecycle of Non-Automatic Weighing Instrument (NAWI) testing and certification. It replaces paper-based test records, manual calculations, and physical report filing with a structured digital workflow — from instrument registration through test execution, compliance evaluation, and standardized report generation.
+NAWI Sahayak is a laboratory software application that digitizes the complete lifecycle of Non-Automatic Weighing Instrument (NAWI) testing and certification. It replaces paper-based test records, manual calculations, and physical report filing with a structured digital workflow — from instrument registration through test execution, compliance evaluation, and standardized report generation.
 
 ### 1.2 Who Uses It
 
@@ -32,7 +32,7 @@ Laboratory testing for NAWI compliance under OIML R-76 currently involves:
 - Physical storage of reports with no search capability
 - No standardized report format across laboratories
 
-NAWI TestFlow eliminates these problems by providing a single system that captures structured data, performs calculations automatically, enforces compliance rules, and generates standardized reports — all with a complete audit trail.
+NAWI Sahayak eliminates these problems by providing a single system that captures structured data, performs calculations automatically, enforces compliance rules, and generates standardized reports — all with a complete audit trail.
 
 ### 1.4 What We Are NOT Building
 

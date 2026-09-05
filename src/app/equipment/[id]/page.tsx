@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — Equipment Detail Page
+ * NAWI Sahayak — Equipment Detail Page
  *
  * View equipment details, calibration information, and status.
  */

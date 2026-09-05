@@ -1,10 +1,10 @@
 """
-NAWI TestFlow -- Demonstration Data
+NAWI Sahayak -- Demonstration Data
 
 ! ALL DATA IN THIS FILE IS FICTIONAL AND FOR DEMONSTRATION ONLY !
 
 This module contains realistic but completely fictional data for showcasing
-the NAWI TestFlow application at the Smart India Hackathon (SIH).
+the NAWI Sahayak application at the Smart India Hackathon (SIH).
 
 NO real regulatory data, laboratory data, or test results are represented.
 
@@ -627,7 +627,7 @@ def get_demo_test_3_input() -> TestInput:
 def print_demo_summary():
     """Print summary of all demo data."""
     print("\n" + "=" * 72)
-    print("NAWI TestFlow -- Demonstration Data Summary")
+    print("NAWI Sahayak -- Demonstration Data Summary")
     print("=" * 72)
     print(f"\n!  {DEMO_DISCLAIMER}\n")
 

@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — DataTable Component v2
+ * NAWI Sahayak — DataTable Component v2
  *
  * The primary data display component.
  * Tables ARE the interface in laboratory software.

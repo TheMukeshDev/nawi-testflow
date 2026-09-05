@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — SectionHeader
+ * NAWI Sahayak — SectionHeader
  *
  * Consistent section heading used inside dashboard panels: title with an
  * optional icon, an optional count pill, and an optional right-aligned action.

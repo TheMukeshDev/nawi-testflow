@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — Dashboard Layout
+ * NAWI Sahayak — Dashboard Layout
  *
  * Wraps authenticated pages with sidebar navigation.
  * Desktop: persistent sidebar. Mobile: hamburger + drawer.

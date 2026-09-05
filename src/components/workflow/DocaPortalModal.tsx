@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — DoCA e-Maap National Portal Integration Modal
+ * NAWI Sahayak — DoCA e-Maap National Portal Integration Modal
  *
  * Demonstrates national-level interoperability with the Ministry of
  * Consumer Affairs e-Maap / National Legal Metrology Portal.
@@ -88,7 +88,7 @@ export function DocaPortalModal({ open, onClose, test, report }: DocaPortalModal
         {/* Body */}
         <div className="p-5 space-y-4 text-[13px]">
           <div className="p-3 bg-amber-50/70 border border-amber-200 rounded-sm text-[12px] text-amber-900 leading-relaxed">
-            <strong>National Ledger Synchronization:</strong> Connects NAWI TestFlow directly to the national model approval database, preventing counterfeit certificates and duplicate instrument serials across Indian laboratories.
+            <strong>National Ledger Synchronization:</strong> Connects NAWI Sahayak directly to the national model approval database, preventing counterfeit certificates and duplicate instrument serials across Indian laboratories.
           </div>
 
           {/* Stepper progress */}

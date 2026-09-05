@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — Workflow & Notification Store
+ * NAWI Sahayak — Workflow & Notification Store
  *
  * Client-side persistent store for test reports, generated reports,
  * and role-targeted notifications across the application lifecycle.

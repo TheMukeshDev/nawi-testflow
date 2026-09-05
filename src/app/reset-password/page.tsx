@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — Password Reset Page
+ * NAWI Sahayak — Password Reset Page
  *
  * Route: /reset-password
  * Handles:
@@ -115,7 +115,7 @@ function ResetPasswordContent() {
             <div className="w-[28px] h-[28px] bg-[#1e3a5f] rounded-sm flex items-center justify-center">
               <span className="text-white text-[11px] font-bold">NW</span>
             </div>
-            <span className="text-[14px] font-semibold text-gray-900">NAWI TestFlow</span>
+            <span className="text-[14px] font-semibold text-gray-900">NAWI Sahayak</span>
           </Link>
           <Link href="/login" className="text-[12px] text-[#1e3a5f] hover:underline font-medium">
             &larr; Back to Sign In

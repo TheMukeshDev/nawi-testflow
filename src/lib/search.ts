@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — Universal Deep-Search Utilities
+ * NAWI Sahayak — Universal Deep-Search Utilities
  *
  * Search helper used by every table/dashboard across all roles. Unlike the old
  * per-page filters (which checked 2–4 hard-coded string fields and crashed on

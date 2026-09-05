@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — Supabase Client
+ * NAWI Sahayak — Supabase Client
  *
  * Real Supabase client for authentication and data.
  * Uses NEXT_PUBLIC_* env vars (inlined at build time).

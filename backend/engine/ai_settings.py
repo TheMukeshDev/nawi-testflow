@@ -1,5 +1,5 @@
 """
-NAWI TestFlow — AI Settings Store.
+NAWI Sahayak — AI Settings Store.
 
 Controls WHEN Gemini may be used:
 

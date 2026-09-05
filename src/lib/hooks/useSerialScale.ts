@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — Web Serial Scale Hook
+ * NAWI Sahayak — Web Serial Scale Hook
  *
  * Direct communication hook with digital weighing scales over RS-232 / USB
  * using the W3C Web Serial API (navigator.serial).

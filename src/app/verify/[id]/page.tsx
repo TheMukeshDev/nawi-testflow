@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — Public Certificate Verification Portal
+ * NAWI Sahayak — Public Certificate Verification Portal
  *
  * Route: /verify/[id]
  * Accessible to inspectors, legal metrology officers, and consumer clients
@@ -126,7 +126,7 @@ export default function CertificateVerificationPage() {
     verify();
   }, [id]);
 
-  const qrSvg = generateQRCodeSVG(typeof window !== 'undefined' ? window.location.href : `https://nawi-testflow.vercel.app/verify/${id}`, 110);
+  const qrSvg = generateQRCodeSVG(typeof window !== 'undefined' ? window.location.href : `https://nawi-sahayak.vercel.app/verify/${id}`, 110);
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
@@ -143,7 +143,7 @@ export default function CertificateVerificationPage() {
             </div>
           </div>
           <Link href="/" className="text-[12px] text-blue-200 hover:text-white transition-colors">
-            NAWI TestFlow →
+            NAWI Sahayak →
           </Link>
         </div>
       </header>

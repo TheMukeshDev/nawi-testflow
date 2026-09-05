@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — Static equipment catalog
+ * NAWI Sahayak — Static equipment catalog
  *
  * Equipment = calibration weights, standards, and test accessories.
  * NOTE: There is currently NO equipment catalog table in the database.

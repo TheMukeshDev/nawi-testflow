@@ -1,5 +1,5 @@
 """
-NAWI TestFlow — Application Configuration
+NAWI Sahayak — Application Configuration
 
 Uses pydantic-settings for environment variable management.
 All secrets loaded from environment variables, never hardcoded.
@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
     
     # Application
-    APP_NAME: str = "NAWI TestFlow"
+    APP_NAME: str = "NAWI Sahayak"
     APP_VERSION: str = "1.0.0"
     DEBUG: bool = False
     
@@ -44,10 +44,10 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: str = ""
     SMTP_HOST: str = ""
     SMTP_PORT: int = 465
-    SMTP_FROM_NAME: str = "NAWI TestFlow"
+    SMTP_FROM_NAME: str = "NAWI Sahayak"
     
     # CORS — comma-separated in env, e.g.
-    # CORS_ORIGINS="http://localhost:3000,https://nawi-testflow.vercel.app"
+    # CORS_ORIGINS="http://localhost:3000,https://nawi-sahayak.vercel.app"
     # The deployed frontend origin MUST be listed here or browsers block API calls.
     CORS_ORIGINS: str = "http://localhost:3000"
 

@@ -1,5 +1,5 @@
 -- ============================================================================
--- NAWI TestFlow — Seed Data (002_seed_data.sql)
+-- NAWI Sahayak — Seed Data (002_seed_data.sql)
 --
 -- Run this in Supabase SQL Editor on the LIVE database.
 -- Column names deliberately match the live schema (verified via OpenAPI):

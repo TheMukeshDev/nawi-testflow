@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — Edit Laboratory Page
+ * NAWI Sahayak — Edit Laboratory Page
  *
  * Form for editing an existing laboratory.
  * Pre-fills form with current laboratory data.

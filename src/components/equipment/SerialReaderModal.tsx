@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — Serial Reader Modal
+ * NAWI Sahayak — Serial Reader Modal
  *
  * Direct interface for capturing real-time digital scale readings
  * over Web Serial (RS-232 / USB) into NAWI test observation forms.

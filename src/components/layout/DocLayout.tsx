@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — Documentation Layout
+ * NAWI Sahayak — Documentation Layout
  *
  * Provides sidebar navigation, breadcrumbs, search, and responsive mobile drawer
  * for the documentation center.
@@ -143,7 +143,7 @@ export function DocLayout({ children, title, subtitle }: { children: React.React
                   <line x1="3" y1="8" x2="21" y2="8" stroke="white" strokeWidth="2" strokeLinecap="round"/>
                 </svg>
               </div>
-              <span className="text-[13px] font-semibold text-gray-900 hidden sm:inline">NAWI TestFlow</span>
+              <span className="text-[13px] font-semibold text-gray-900 hidden sm:inline">NAWI Sahayak</span>
             </Link>
             <span className="text-gray-300 hidden sm:inline">|</span>
             <span className="text-[12px] text-gray-500 hidden sm:inline">Documentation</span>

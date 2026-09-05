@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — Authentication Context
+ * NAWI Sahayak — Authentication Context
  *
  * React context for managing authentication state.
  * Provides user info, role, and permission checks.

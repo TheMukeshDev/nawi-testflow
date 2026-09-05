@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — Dialog Component v2
+ * NAWI Sahayak — Dialog Component v2
  *
  * Modal dialog for confirmations and important actions.
  *

@@ -1,5 +1,5 @@
 """
-NAWI TestFlow — Calculation Engine Types
+NAWI Sahayak — Calculation Engine Types
 
 Core data types for inputs, outputs, and intermediate results.
 All types are dataclasses for immutability and clarity.

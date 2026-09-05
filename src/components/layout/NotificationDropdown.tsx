@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — Notification Dropdown Component
+ * NAWI Sahayak — Notification Dropdown Component
  *
  * Real-time notification center in TopBar for workflow state transitions:
  * - Submissions awaiting Reviewer approval

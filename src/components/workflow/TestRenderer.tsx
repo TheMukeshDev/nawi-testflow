@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — Dynamic Test Renderer
+ * NAWI Sahayak — Dynamic Test Renderer
  *
  * Renders test input fields, observation tables, and calculated values
  * based on test definitions. This component dynamically adapts to

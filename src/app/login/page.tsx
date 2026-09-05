@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — Login Page
+ * NAWI Sahayak — Login Page
  *
  * Professional login page with demo credentials display.
  */
@@ -51,7 +51,7 @@ export default function LoginPage() {
             <div className="w-[28px] h-[28px] bg-[#1e3a5f] rounded-sm flex items-center justify-center">
               <span className="text-white text-[11px] font-bold">NW</span>
             </div>
-            <span className="text-[14px] font-semibold text-gray-900">NAWI TestFlow</span>
+            <span className="text-[14px] font-semibold text-gray-900">NAWI Sahayak</span>
           </Link>
           <div className="ml-auto">
             <Link href="/" className="text-[12px] text-gray-500 hover:text-gray-700">
@@ -70,7 +70,7 @@ export default function LoginPage() {
               </div>
               <div>
                 <h1 className="text-[18px] font-semibold text-gray-900 leading-tight">Sign In</h1>
-                <p className="text-[12px] text-gray-500">NAWI TestFlow — OIML R-76</p>
+                <p className="text-[12px] text-gray-500">NAWI Sahayak — OIML R-76</p>
               </div>
             </div>
 
@@ -164,16 +164,16 @@ export default function LoginPage() {
           </div>
 
           <p className="text-center text-[11px] text-gray-400 mt-4">
-            NAWI TestFlow — OIML R-76 Test Report Management System
+            NAWI Sahayak — OIML R-76 Test Report Management System
           </p>
           <p className="text-center text-[11px] text-gray-400 mt-1">
             <a
-              href="https://github.com/TheMukeshDev/nawi-testflow"
+              href="https://github.com/TheMukeshDev/nawi-sahayak"
               target="_blank"
               rel="noopener noreferrer"
               className="hover:text-[#1e3a5f]"
             >
-              github.com/TheMukeshDev/nawi-testflow
+              github.com/TheMukeshDev/nawi-sahayak
             </a>
           </p>
         </div>

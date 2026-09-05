@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — Laboratories List Page
+ * NAWI Sahayak — Laboratories List Page
  *
  * Main view for managing laboratories.
  * Features:

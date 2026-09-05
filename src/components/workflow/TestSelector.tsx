@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — Test Selector
+ * NAWI Sahayak — Test Selector
  *
  * Displays available tests based on instrument configuration
  * and allows selection of which tests to perform.

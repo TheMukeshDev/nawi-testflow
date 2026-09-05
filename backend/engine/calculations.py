@@ -1,5 +1,5 @@
 """
-NAWI TestFlow — Calculation Module
+NAWI Sahayak — Calculation Module
 
 Deterministic, reproducible calculations for OIML R-76 test parameters.
 All functions are pure — no side effects, no external dependencies.

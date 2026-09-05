@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — TopBar Component
+ * NAWI Sahayak — TopBar Component
  *
  * Fixed top bar across all pages.
  * Desktop: breadcrumbs, search, new test button.

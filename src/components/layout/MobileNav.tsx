@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — Mobile Navigation Drawer
+ * NAWI Sahayak — Mobile Navigation Drawer
  *
  * Replaces the sidebar on mobile/tablet.
  * Slide-in drawer with role-based navigation.
@@ -82,7 +82,7 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
               <span className="text-white text-[11px] font-bold">NW</span>
             </div>
             <div className="flex flex-col leading-none">
-              <span className="text-[13px] font-semibold text-white tracking-tight">NAWI TestFlow</span>
+              <span className="text-[13px] font-semibold text-white tracking-tight">NAWI Sahayak</span>
               <span className="text-[10px] text-gray-400">OIML R-76 Suite</span>
             </div>
           </div>

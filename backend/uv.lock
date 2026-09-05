@@ -537,7 +537,7 @@ wheels = [
 ]
 
 [[package]]
-name = "nawi-testflow-backend"
+name = "nawi-sahayak-backend"
 version = "1.0.0"
 source = { virtual = "." }
 dependencies = [

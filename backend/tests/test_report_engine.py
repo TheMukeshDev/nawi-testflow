@@ -1,5 +1,5 @@
 """
-NAWI TestFlow — Report Engine Tests
+NAWI Sahayak — Report Engine Tests
 
 Comprehensive tests for PDF and DOCX report generation.
 """
@@ -141,7 +141,7 @@ def sample_report():
             overall_status="pass",
             remarks="All tests passed. Instrument meets OIML R-76 requirements.",
         ),
-        remarks="Report generated automatically by NAWI TestFlow system.",
+        remarks="Report generated automatically by NAWI Sahayak system.",
         technician=Signature(
             name="Dr. Rajesh Kumar",
             title="Senior Metrologist",

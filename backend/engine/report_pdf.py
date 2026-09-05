@@ -1,5 +1,5 @@
 """
-NAWI TestFlow — PDF Report Generator
+NAWI Sahayak — PDF Report Generator
 
 Generates professional laboratory test reports using ReportLab.
 Designed for technical/metrology reports, NOT marketing materials.

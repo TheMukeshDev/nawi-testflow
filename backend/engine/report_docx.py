@@ -1,5 +1,5 @@
 """
-NAWI TestFlow — DOCX Report Generator
+NAWI Sahayak — DOCX Report Generator
 
 Generates editable DOCX test reports using python-docx.
 Designed for technical/metrology reports that can be further edited.

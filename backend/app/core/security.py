@@ -1,5 +1,5 @@
 """
-NAWI TestFlow — Security Module
+NAWI Sahayak — Security Module
 
 Handles authentication using Supabase Auth and JWT tokens.
 Provides dependency injection for protected routes.

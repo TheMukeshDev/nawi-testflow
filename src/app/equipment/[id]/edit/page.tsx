@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — Edit Equipment Page
+ * NAWI Sahayak — Edit Equipment Page
  *
  * Form for editing an existing equipment record.
  * Pre-fills form with current equipment data.

@@ -1,5 +1,5 @@
 /**
- * NAWI TestFlow — Dashboard Live Search Store
+ * NAWI Sahayak — Dashboard Live Search Store
  *
  * Module-level singleton so the TopBar header search and every dashboard page
  * share EXACTLY one query value (no provider nesting / duplicate-context risk).
