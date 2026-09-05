@@ -16,54 +16,8 @@ import { Badge } from '@/components/ui/Badge';
 import { Alert } from '@/components/ui/Alert';
 import { FieldSet } from '@/components/ui/FormControls';
 import { getCalibrationStatus, getCalibrationStatusConfig } from '@/components/forms/EquipmentForm';
-
-// ============================================================================
-// TYPES
-// ============================================================================
-
-interface EquipmentDetail {
-  id: string;
-  equipmentId: string;
-  name: string;
-  type: string;
-  manufacturer: string;
-  model: string;
-  serialNumber: string;
-  calibrationDate: string;
-  calibrationValidUntil: string;
-  calibrationCertificateRef: string;
-  laboratoryId: string;
-  laboratoryCode: string;
-  laboratoryName: string;
-  condition: 'good' | 'needs-repair' | 'out-of-service';
-  notes: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-// ============================================================================
-// MOCK DATA
-// ============================================================================
-
-const MOCK_EQUIPMENT: EquipmentDetail = {
-  id: '1',
-  equipmentId: 'WTS-E2-001',
-  name: 'E2 Calibration Weight Set',
-  type: 'Standard Weight',
-  manufacturer: 'Sartorius',
-  model: 'PTA',
-  serialNumber: 'WTS-E2-001',
-  calibrationDate: '2026-03-15',
-  calibrationValidUntil: '2027-03-15',
-  calibrationCertificateRef: 'CAL-2026-00123',
-  laboratoryId: '1',
-  laboratoryCode: 'NPL-DL-01',
-  laboratoryName: 'National Physical Laboratory — Delhi',
-  condition: 'good',
-  notes: 'Primary E2 weight set for Class II and Class III verification testing.',
-  createdAt: '2026-03-15T00:00:00Z',
-  updatedAt: '2026-09-01T00:00:00Z',
-};
+import { getEquipment, type EquipmentRecord } from '@/lib/equipment-catalog';
+import { supabaseDb } from '@/lib/supabase-db';
 
 // ============================================================================
 // HELPER COMPONENTS
@@ -76,7 +30,7 @@ function DetailRow({ label, value, mono = false }: {
 }) {
   return (
     <div className="flex items-baseline gap-2 py-1.5">
-      <span className="text-[12px] text-gray-500 w-[180px] shrink-0">{label}</span>
+      <span className="text-[12px] text-gray-500 w-[110px] sm:w-[180px] shrink-0">{label}</span>
       <span className={`text-[13px] text-gray-900 ${mono ? 'font-mono text-[12px]' : ''}`}>
         {value !== null && value !== undefined && value !== ''
           ? value
@@ -98,7 +52,73 @@ function cn(...classes: (string | boolean | undefined | null)[]) {
 export default function EquipmentDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const { id } = React.use(params);
-  const equipment = MOCK_EQUIPMENT;
+  const [equipment, setEquipment] = React.useState<EquipmentRecord | null>(null);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      // Fast path: static catalog record
+      const catalog = getEquipment(id);
+      let found = catalog ?? null;
+      if (!found) {
+        // Fallback: live record from Supabase (test_equipment table)
+        const live = await supabaseDb.getEquipmentById(id);
+        if (!cancelled && live) {
+          found = {
+            id: live.id,
+            equipmentId: live.serialNumber || live.id,
+            name: live.name || '',
+            type: live.type || '',
+            manufacturer: live.manufacturer || '—',
+            model: live.model || '—',
+            serialNumber: live.serialNumber || '',
+            calibrationDate: live.calibrationDate || '',
+            calibrationValidUntil: live.calibrationValidUntil || '',
+            calibrationCertificateRef: live.certificateNumber || '',
+            laboratoryId: live.laboratoryId || '',
+            laboratoryCode: live.laboratoryCode || '',
+            laboratoryName: live.laboratoryName || '',
+            condition: live.condition || 'good',
+            notes: live.notes || '',
+            createdAt: live.createdAt || '',
+            updatedAt: live.updatedAt || '',
+          };
+        }
+      }
+      if (!cancelled) {
+        setEquipment(found);
+        setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [id]);
+
+  if (loading) {
+    return (
+      <Shell>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-[13px] text-gray-500">Loading equipment…</div>
+        </div>
+      </Shell>
+    );
+  }
+
+  if (!equipment) {
+    return (
+      <Shell breadcrumbs={[{ label: 'Equipment', href: '/equipment' }, { label: 'Not Found', current: true }]}>
+        <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
+          <h2 className="text-[16px] font-semibold text-gray-900 mb-2">Equipment Not Found</h2>
+          <p className="text-[13px] text-gray-600 mb-4">
+            No equipment matches the requested record.
+          </p>
+          <Link href="/equipment" className="px-4 py-2 bg-primary-600 text-white rounded-md text-[13px] font-medium hover:bg-primary-700">
+            ← Back to Equipment
+          </Link>
+        </div>
+      </Shell>
+    );
+  }
 
   const calibrationStatus = getCalibrationStatus(equipment.calibrationDate, equipment.calibrationValidUntil);
   const statusConfig = getCalibrationStatusConfig(calibrationStatus);

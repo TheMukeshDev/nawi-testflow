@@ -39,6 +39,11 @@ export interface ColumnDef<T> {
   render?: (value: unknown, row: T, index: number) => React.ReactNode;
   accessor?: (row: T) => unknown;
   mono?: boolean;
+  /**
+   * Extra classes applied to the matching <th> and <td> cells.
+   * On mobile you can hide low-priority columns, e.g. 'hidden md:table-cell'.
+   */
+  className?: string;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -139,15 +144,15 @@ export function DataTable<T>({
   }
 
   return (
-    <div className="panel overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full text-[13px]" role="grid">
+    <div className="panel overflow-hidden flex flex-col">
+      <div className="overflow-x-auto flex-1 min-h-0 max-h-[calc(100vh-16rem)] overscroll-x-contain">
+        <table className="w-full min-w-full text-[13px]" role="grid">
           {caption && <caption className="sr-only">{caption}</caption>}
 
           <thead>
             <tr className="border-b border-gray-200 bg-gray-100/70">
               {selectable && (
-                <th className="w-[40px] px-2 py-2 text-center">
+                <th className="sticky top-0 z-10 bg-gray-100 w-[40px] px-2 py-2 text-center">
                   <input
                     type="checkbox"
                     checked={allSelected}
@@ -162,12 +167,14 @@ export function DataTable<T>({
                 <th
                   key={col.key}
                   className={cn(
+                    'sticky top-0 z-10 bg-gray-100',
                     'px-2.5 py-2 text-left',
                     'text-[11px] font-semibold text-gray-500 uppercase tracking-wider',
                     'border-b border-gray-200',
                     col.sortable && 'cursor-pointer hover:text-gray-800 select-none',
                     col.align === 'center' && 'text-center',
                     col.align === 'right' && 'text-right',
+                    col.className,
                   )}
                   style={{ width: col.width, minWidth: col.minWidth }}
                   scope="col"
@@ -239,6 +246,7 @@ export function DataTable<T>({
                           col.align === 'center' && 'text-center',
                           col.align === 'right' && 'text-right',
                           col.mono && 'font-mono text-[12px]',
+                          col.className,
                         )}
                       >
                         {col.render ? col.render(value, row, index) : String(value ?? '—')}
@@ -253,7 +261,7 @@ export function DataTable<T>({
       </div>
 
       {pagination && (
-        <div className="flex items-center justify-between px-3 py-2 border-t border-gray-200 bg-gray-50/60 text-[12px] text-gray-500">
+        <div className="shrink-0 flex items-center justify-between px-3 py-2 border-t border-gray-200 bg-gray-50/60 text-[12px] text-gray-500">
           <span className="tracking-tight">
             {pagination.total === 0
               ? 'No records'
@@ -382,14 +390,14 @@ function TableSkeleton<T>({
   selectable: boolean;
 }) {
   return (
-    <div className="panel overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full">
+    <div className="panel overflow-hidden flex flex-col">
+      <div className="overflow-auto flex-1 min-h-0 max-h-[calc(100vh-16rem)]">
+        <table className="w-full min-w-full">
           <thead>
             <tr className="border-b border-gray-200 bg-gray-50">
-              {selectable && <th className="w-[40px] px-2 py-2" />}
+              {selectable && <th className="sticky top-0 z-10 bg-gray-50 w-[40px] px-2 py-2" />}
               {columns.map(col => (
-                <th key={col.key} className="px-2.5 py-2 text-left" style={{ width: col.width }}>
+                <th key={col.key} className="sticky top-0 z-10 bg-gray-50 px-2.5 py-2 text-left" style={{ width: col.width }}>
                   <div className="h-3 bg-gray-200 rounded w-3/4 animate-pulse" />
                 </th>
               ))}
@@ -430,7 +438,7 @@ interface TableFiltersProps {
 
 export function TableFilters({ children, className }: TableFiltersProps) {
   return (
-    <div className={cn('flex items-center gap-2 py-2 mb-2', className)}>
+    <div className={cn('flex flex-wrap items-center gap-2 py-2 mb-2', className)}>
       {children}
     </div>
   );

@@ -147,26 +147,27 @@ export default function ViewerDashboard() {
                 {searchQuery ? `No reports matched "${searchQuery}"` : 'No finalized reports available'}
               </div>
             ) : (
-              <table className="w-full text-[13px]">
-                <thead>
-                  <tr className="border-b border-gray-200 bg-gray-50">
-                    <th className="px-3 py-2 text-left font-semibold text-gray-700 text-[11px] uppercase tracking-wide">
-                      Test Ref
-                    </th>
-                    <th className="px-3 py-2 text-left font-semibold text-gray-700 text-[11px] uppercase tracking-wide">
-                      Instrument Specification
-                    </th>
-                    <th className="px-3 py-2 text-left font-semibold text-gray-700 text-[11px] uppercase tracking-wide">
-                      Laboratory
-                    </th>
-                    <th className="px-3 py-2 text-left font-semibold text-gray-700 text-[11px] uppercase tracking-wide">
-                      Approval Authority
-                    </th>
-                    <th className="px-3 py-2 text-right font-semibold text-gray-700 text-[11px] uppercase tracking-wide">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[760px] text-[13px]">
+                  <thead>
+                    <tr className="border-b border-gray-200 bg-gray-50">
+                      <th className="sticky top-0 z-10 bg-gray-50 px-3 py-2 text-left font-semibold text-gray-700 text-[11px] uppercase tracking-wide">
+                        Test Ref
+                      </th>
+                      <th className="sticky top-0 z-10 bg-gray-50 px-3 py-2 text-left font-semibold text-gray-700 text-[11px] uppercase tracking-wide">
+                        Instrument Specification
+                      </th>
+                      <th className="sticky top-0 z-10 bg-gray-50 px-3 py-2 text-left font-semibold text-gray-700 text-[11px] uppercase tracking-wide">
+                        Laboratory
+                      </th>
+                      <th className="sticky top-0 z-10 bg-gray-50 px-3 py-2 text-left font-semibold text-gray-700 text-[11px] uppercase tracking-wide">
+                        Approval Authority
+                      </th>
+                      <th className="sticky top-0 z-10 bg-gray-50 px-3 py-2 text-right font-semibold text-gray-700 text-[11px] uppercase tracking-wide">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
                 <tbody>
                   {filteredCompleted.map((t) => (
                     <tr key={t.id} className="border-b border-gray-100 hover:bg-gray-50/60 transition-colors">
@@ -204,7 +205,8 @@ export default function ViewerDashboard() {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+                </table>
+              </div>
             )}
           </div>
         </div>

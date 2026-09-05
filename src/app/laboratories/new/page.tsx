@@ -13,6 +13,7 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { Input, Textarea, FieldSet } from '@/components/ui/FormControls';
 import { Button } from '@/components/ui/Button';
 import { Alert } from '@/components/ui/Alert';
+import { RouteGuard } from '@/components/auth/RouteGuard';
 import { plusYearsISO } from '@/lib/dates';
 
 interface LabFormData {
@@ -105,6 +106,7 @@ export default function NewLaboratoryPage() {
   };
 
   return (
+    <RouteGuard requiredRoles={['admin']}>
     <Shell breadcrumbs={[
       { label: 'Laboratories', href: '/laboratories' },
       { label: 'Register New', current: true },
@@ -252,5 +254,6 @@ export default function NewLaboratoryPage() {
         </div>
       </form>
     </Shell>
+    </RouteGuard>
   );
 }

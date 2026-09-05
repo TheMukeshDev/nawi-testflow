@@ -95,6 +95,7 @@ export default function TestsPage() {
       key: 'instrumentModel',
       header: 'Model',
       width: 160,
+      className: 'hidden md:table-cell',
     },
     {
       key: 'instrumentClass',
@@ -106,6 +107,7 @@ export default function TestsPage() {
       key: 'laboratory',
       header: 'Laboratory',
       width: 100,
+      className: 'hidden lg:table-cell',
     },
     {
       key: 'status',
@@ -118,18 +120,21 @@ export default function TestsPage() {
       key: 'complianceResult',
       header: 'Compliance',
       width: 120,
+      className: 'hidden sm:table-cell',
       render: (_, row) => <ComplianceBadge verdict={row.complianceResult} />,
     },
     {
       key: 'technician',
       header: 'Technician',
       width: 110,
+      className: 'hidden xl:table-cell',
     },
     {
       key: 'lastUpdated',
       header: 'Updated',
       sortable: true,
       width: 100,
+      className: 'hidden sm:table-cell',
       render: (_, row) => {
         try {
           return new Date(row.lastUpdated).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });

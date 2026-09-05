@@ -27,6 +27,7 @@ import { useAuth } from '@/lib/auth-context';
 import { getCalibrationStatus, getCalibrationStatusConfig } from '@/components/forms/EquipmentForm';
 import { supabaseDb } from '@/lib/supabase-db';
 import { LoadingState } from '@/components/ui/EmptyState';
+import { getEquipmentRecords } from '@/lib/equipment-catalog';
 
 // ============================================================================
 // TYPES
@@ -103,6 +104,7 @@ const COLUMNS: ColumnDef<EquipmentRecord>[] = [
     key: 'type',
     header: 'Type',
     width: 112,
+    className: 'hidden sm:table-cell',
     render: (_, row) => TYPE_LABELS[row.type] || row.type,
   },
   {
@@ -111,12 +113,14 @@ const COLUMNS: ColumnDef<EquipmentRecord>[] = [
     mono: true,
     width: 112,
     minWidth: 96,
+    className: 'hidden lg:table-cell',
   },
   {
     key: 'laboratoryCode',
     header: 'Laboratory',
     width: 96,
     minWidth: 88,
+    className: 'hidden md:table-cell',
   },
   {
     key: 'calibrationStatus',
@@ -192,14 +196,15 @@ export default function EquipmentPage() {
   const [loading, setLoading] = React.useState(true);
   const pageSize = 25;
 
-  // Load real equipment data from Supabase on mount
+  // Load equipment data on mount — prefer live Supabase rows,
+  // fall back to the static catalog when the table is empty/offline.
   React.useEffect(() => {
     let mounted = true;
     (async () => {
       try {
         const rows = await supabaseDb.getEquipment();
         if (!mounted) return;
-        const mapped: EquipmentRecord[] = (rows as any[]).map((r, i) => ({
+        let mapped: EquipmentRecord[] = (rows as any[]).map((r, i) => ({
           id: r.id,
           equipmentId: r.serialNumber || `EQ-${i + 1}`,
           name: r.name || '',
@@ -215,6 +220,30 @@ export default function EquipmentPage() {
           condition: (r.condition as EquipmentRecord['condition']) || 'good',
           createdAt: r.createdAt || '',
         }));
+        if (mapped.length === 0) {
+          const TYPE_SLUGS: Record<string, string> = {
+            'Standard Weight': 'standard-weight',
+            'Calibrated Weight': 'calibrated-weight',
+            Accessory: 'accessory',
+            Tool: 'tool',
+          };
+          mapped = getEquipmentRecords().map((c) => ({
+            id: c.id,
+            equipmentId: c.equipmentId,
+            name: c.name,
+            type: TYPE_SLUGS[c.type] || c.type.toLowerCase().replace(/\s+/g, '-'),
+            manufacturer: c.manufacturer,
+            model: c.model,
+            serialNumber: c.serialNumber,
+            calibrationDate: c.calibrationDate,
+            calibrationValidUntil: c.calibrationValidUntil,
+            calibrationCertificateRef: c.calibrationCertificateRef,
+            laboratoryCode: c.laboratoryCode,
+            laboratoryName: c.laboratoryName,
+            condition: c.condition,
+            createdAt: c.createdAt,
+          }));
+        }
         setEquipment(mapped);
       } catch (err) {
         console.warn('Failed to load equipment:', err);
@@ -307,21 +336,21 @@ export default function EquipmentPage() {
             placeholder="Search name, ID, serial number…"
             value={searchQuery}
             onChange={(e) => { setDashboardSearch(e.target.value); setPage(1); }}
-            className="flex-1 min-w-[200px]"
+            className="w-full sm:min-w-[200px] sm:flex-1"
           />
           <Select
             label=""
             value={typeFilter}
             onChange={(e) => { setTypeFilter(e.target.value); setPage(1); }}
             options={TYPE_FILTERS}
-            className="w-[150px]"
+            className="w-full sm:w-[150px]"
           />
           <Select
             label=""
             value={calibrationFilter}
             onChange={(e) => { setCalibrationFilter(e.target.value); setPage(1); }}
             options={CALIBRATION_FILTERS}
-            className="w-[150px]"
+            className="w-full sm:w-[150px]"
           />
         </TableFilters>
       </div>

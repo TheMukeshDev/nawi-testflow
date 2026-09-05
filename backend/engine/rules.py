@@ -80,7 +80,10 @@ class RuleStore:
             if r.rule_type == rule_type and r.is_active
         ]
         if instrument_class:
-            rules = [r for r in rules if r.instrument_class == instrument_class]
+            rules = [
+                r for r in rules
+                if r.instrument_class is None or r.instrument_class == instrument_class
+            ]
         return rules
     
     def get_active_rules(self) -> list[ComplianceRule]:

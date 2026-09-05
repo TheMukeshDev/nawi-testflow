@@ -5,8 +5,6 @@
  * with local cache fallback, ensuring data remains intact on page refreshes.
  */
 
-import { isSupabaseConfigured } from './supabase/client';
-
 export interface DbUser {
   id: string;
   email: string;
@@ -204,32 +202,47 @@ export const supabaseDb = {  /**
   },
 
   /**
-   * Fetch all users from Supabase profiles.
-   *
-   * The server response is merged (deduplicated by id) with the locally cached
-   * user list instead of replacing it. This guarantees a partial or incomplete
-   * server response — e.g. a `profiles` table that only holds one newly created
-   * user — can never wipe out users we already know about.
+   * Fetch a single test equipment record from Supabase by id
+   */
+  async getEquipmentById(id: string): Promise<any | null> {
+    try {
+      const res = await fetch(`/api/db/test_equipment?id=eq.${encodeURIComponent(id)}&select=*`, { cache: 'no-store' });
+      if (res.ok) {
+        const rows = await res.json();
+        const r = Array.isArray(rows) ? rows[0] : null;
+        if (r) {
+          return {
+            id: r.id,
+            name: r.equipment_name || '',
+            type: r.equipment_type || '',
+            manufacturer: '',
+            model: '',
+            serialNumber: r.serial_number || '',
+            certificateNumber: r.certificate_number || '',
+            laboratoryCode: '',
+            laboratoryName: '',
+            calibrationDate: r.calibration_date || '',
+            calibrationValidUntil: r.calibration_valid_until || '',
+            condition: 'good',
+            createdAt: r.created_at || '',
+          };
+        }
+      }
+    } catch (err) {
+      console.warn('[supabaseDb] Failed to fetch equipment item:', err);
+    }
+    return null;
+  },
+
+  /**
+   * Fetch all users from Supabase profiles
    */
   async getUsers(): Promise<DbUser[]> {
-    const cacheKey = 'nawi_cached_users_v1';
-    const readCache = (): DbUser[] => {
-      if (typeof window === 'undefined') return [];
-      try {
-        const cached = localStorage.getItem(cacheKey);
-        return cached ? JSON.parse(cached) : [];
-      } catch {
-        return [];
-      }
-    };
-    const mergeById = (...lists: DbUser[][]): DbUser[] =>
-      [...new Map(lists.flat().map(u => [u.id, u])).values()];
-
     try {
       const res = await fetch('/api/db/profiles?select=*,laboratories!fk_profiles_laboratory(code,name)&order=created_at.desc');
       if (res.ok) {
         const rows = await res.json();
-        if (Array.isArray(rows)) {
+        if (Array.isArray(rows) && rows.length > 0) {
           const mapped: DbUser[] = rows.map(r => ({
             id: r.id,
             email: r.email,
@@ -240,11 +253,9 @@ export const supabaseDb = {  /**
             lastLogin: r.last_login || new Date().toISOString(),
             createdAt: r.created_at || new Date().toISOString(),
           }));
-          // Merge with any locally known users (existing cache) instead of
-          // replacing them with the server subset.
-          const merged = mergeById(mapped, readCache());
-          try { localStorage.setItem(cacheKey, JSON.stringify(merged)); } catch {}
-          return merged;
+          // Save to local cache for instant offline render
+          localStorage.setItem('nawi_cached_users_v1', JSON.stringify(mapped));
+          return mapped;
         }
       }
     } catch (err) {
@@ -252,8 +263,12 @@ export const supabaseDb = {  /**
     }
 
     // Fallback to local cache or defaults
-    const cached = readCache();
-    if (cached.length > 0) return cached;
+    const cached = typeof window !== 'undefined' ? localStorage.getItem('nawi_cached_users_v1') : null;
+    if (cached) {
+      try {
+        return JSON.parse(cached);
+      } catch {}
+    }
 
     return [
       {
@@ -339,15 +354,10 @@ export const supabaseDb = {  /**
 
   /**
    * Add a new user — creates a real Supabase Auth account + profile + login.
-   *
-   * In a configured deployment we never fall back to a profile-only row:
-   * without a Supabase Auth account the returned password can never log in,
-   * which produces "user shows in the list but login says invalid credentials".
-   * The legacy profile-only path is kept only for demo/unconfigured builds.
+   * Returns null (and reverts nothing) if the profile row cannot be persisted,
+   * so the UI can surface an error instead of showing a phantom user.
    */
   async createUser(user: Omit<DbUser, 'id' | 'createdAt' | 'lastLogin'>): Promise<DbUser & { password?: string } | null> {
-    // 1. Create auth user + profile + get login credentials via server-side API
-    let serverError: Error | null = null;
     try {
       const res = await fetch('/api/auth/manage-user', {
         method: 'POST',
@@ -360,84 +370,85 @@ export const supabaseDb = {  /**
           sendEmail: false,
         }),
       });
-      if (res.ok) {
-        const created = await res.json();
-        const newId = created.id;
-        const createdUser: DbUser & { password?: string } = {
-          ...user,
-          id: newId,
-          createdAt: new Date().toISOString(),
-          lastLogin: new Date().toISOString(),
-          password: created.password,
-        };
-        // Optimistically update local cache
-        try {
-          const cached = localStorage.getItem('nawi_cached_users_v1');
-          const users: DbUser[] = cached ? JSON.parse(cached) : [];
-          users.unshift(createdUser);
-          localStorage.setItem('nawi_cached_users_v1', JSON.stringify([...new Map(users.map(u => [u.id, u])).values()]));
-        } catch {}
-        return createdUser;
-      } else {
+      if (!res.ok) {
         const err = await res.json().catch(() => null);
-        serverError = new Error(
-          (err?.error as string) || `Failed to create user (HTTP ${res.status})`,
-        );
-        console.warn('[supabaseDb] manage-user create failed:', serverError.message);
+        console.warn('[supabaseDb] manage-user create failed:', err?.error ?? err?.message ?? res.status);
+        return null;
+      }
+
+      const created = await res.json();
+      const newId = created.id as string | undefined;
+      if (!newId) {
+        console.warn('[supabaseDb] manage-user returned no user id');
+        return null;
+      }
+
+      // The auth user may have been created while the profile upsert silently
+      // failed on the server — verify the profile row actually exists and retry
+      // directly through the DB proxy (valid auth_user_id, so the FK is satisfied).
+      const persisted = await this.ensureProfilePersisted(newId, user);
+      if (!persisted) {
+        console.warn('[supabaseDb] Profile row missing after auth user was created');
+        return null;
+      }
+
+      const createdUser: DbUser & { password?: string } = {
+        ...user,
+        id: newId,
+        createdAt: new Date().toISOString(),
+        lastLogin: new Date().toISOString(),
+        password: created.password,
+      };
+      // Optimistically update local cache
+      try {
+        const cached = localStorage.getItem('nawi_cached_users_v1');
+        const users: DbUser[] = cached ? JSON.parse(cached) : [];
+        users.unshift(createdUser);
+        localStorage.setItem('nawi_cached_users_v1', JSON.stringify([...new Map(users.map(u => [u.id, u])).values()]));
+      } catch {}
+      return createdUser;
+    } catch (err) {
+      console.warn('[supabaseDb] createUser network error:', err);
+      return null;
+    }
+  },
+
+  /**
+   * Ensure a profile row exists for a (real) auth user id. Reads first, then
+   * inserts via the DB proxy using the real auth id so the FK resolves.
+   */
+  async ensureProfilePersisted(authUserId: string, user: Omit<DbUser, 'id' | 'createdAt' | 'lastLogin'>): Promise<boolean> {
+    try {
+      const res = await fetch(`/api/db/profiles?auth_user_id=eq.${encodeURIComponent(authUserId)}&select=id`, { cache: 'no-store' });
+      if (res.ok) {
+        const rows = await res.json();
+        if (Array.isArray(rows) && rows.length > 0) return true;
       }
     } catch (err) {
-      serverError = err instanceof Error ? err : new Error('Failed to create user (network error)');
-      console.warn('[supabaseDb] manage-user create network error:', err);
+      console.warn('[supabaseDb] profile verification lookup failed:', err);
     }
-
-    // When a real Supabase deployment is configured, a profile-only user can
-    // never log in. Surface the real error instead of silently succeeding.
-    if (serverError && isSupabaseConfigured) {
-      throw serverError;
-    }
-
-    // 2. Demo/unconfigured fallback — create just the profile row
-    const newId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `usr-${Date.now()}`;
-    const payload = {
-      id: newId,
-      auth_user_id: newId,
-      email: user.email,
-      full_name: user.fullName,
-      role: user.role,
-      is_active: user.isActive,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-
-    const createdUser: DbUser = {
-      ...user,
-      id: newId,
-      createdAt: payload.created_at,
-      lastLogin: payload.created_at,
-    };
-
-    // Optimistically update local cache
     try {
-      const cached = localStorage.getItem('nawi_cached_users_v1');
-      const users: DbUser[] = cached ? JSON.parse(cached) : [];
-      users.unshift(createdUser);
-      localStorage.setItem('nawi_cached_users_v1', JSON.stringify([...new Map(users.map(u => [u.id, u])).values()]));
-    } catch {}
-
-    try {
+      const labId = await this.resolveLaboratoryId(user.laboratory);
       const res = await fetch('/api/db/profiles', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          id: authUserId,
+          auth_user_id: authUserId,
+          email: user.email,
+          full_name: user.fullName,
+          role: user.role,
+          is_active: user.isActive !== false,
+          laboratory_id: labId,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }),
       });
-      if (res.ok) {
-        return createdUser;
-      }
+      return res.ok;
     } catch (err) {
-      console.warn('[supabaseDb] Failed to create user on server:', err);
+      console.warn('[supabaseDb] profile retry insert failed:', err);
+      return false;
     }
-
-    return createdUser;
   },
 
   /**

@@ -85,23 +85,30 @@ const COLUMNS: ColumnDef<LabRecord>[] = [
     key: 'city',
     header: 'City',
     width: 110,
+    className: 'hidden sm:table-cell',
   },
   {
     key: 'state',
     header: 'State',
     width: 110,
+    className: 'hidden md:table-cell',
   },
   {
     key: 'accreditationNumber',
     header: 'Accreditation',
     mono: true,
     width: 110,
+    className: 'hidden lg:table-cell',
   },
   {
     key: 'accreditationValidUntil',
     header: 'Valid Until',
     width: 100,
+    className: 'hidden lg:table-cell',
     render: (_, row) => {
+      if (!row.accreditationValidUntil) {
+        return <span className="text-gray-400">—</span>;
+      }
       const date = new Date(row.accreditationValidUntil);
       const isExpired = date < new Date();
       const isExpiringSoon = Math.ceil((date.getTime() - Date.now()) / (1000 * 60 * 60 * 24)) <= 90;
@@ -130,12 +137,14 @@ const COLUMNS: ColumnDef<LabRecord>[] = [
     header: 'Instruments',
     width: 90,
     align: 'center',
+    className: 'hidden sm:table-cell',
   },
   {
     key: 'activeTests',
     header: 'Active Tests',
     width: 90,
     align: 'center',
+    className: 'hidden sm:table-cell',
   },
 ];
 
@@ -247,14 +256,14 @@ export default function LaboratoriesPage() {
             placeholder="Search name, code, city, accreditation…"
             value={searchQuery}
             onChange={(e) => { setDashboardSearch(e.target.value); setPage(1); }}
-            className="flex-1 min-w-[250px]"
+            className="w-full sm:min-w-[250px] sm:flex-1"
           />
           <Select
             label=""
             value={statusFilter}
             onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
             options={STATUS_FILTERS}
-            className="w-[140px]"
+            className="w-full sm:w-[140px]"
           />
         </TableFilters>
       </div>

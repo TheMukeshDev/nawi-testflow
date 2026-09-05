@@ -148,18 +148,19 @@ export default function RepositoryPage() {
               No audit history entries found matching criteria.
             </div>
           ) : (
-            <table className="w-full text-[12.5px]">
-              <thead>
-                <tr className="bg-gray-50 border-b border-gray-200 text-gray-700 font-semibold text-left">
-                  <th className="py-2.5 px-3 uppercase text-[11px] tracking-wide">Timestamp</th>
-                  <th className="py-2.5 px-3 uppercase text-[11px] tracking-wide">Action</th>
-                  <th className="py-2.5 px-3 uppercase text-[11px] tracking-wide">Test Reference</th>
-                  <th className="py-2.5 px-3 uppercase text-[11px] tracking-wide">Authorized Officer</th>
-                  <th className="py-2.5 px-3 uppercase text-[11px] tracking-wide">Role</th>
-                  <th className="py-2.5 px-3 uppercase text-[11px] tracking-wide">Status Transition</th>
-                  <th className="py-2.5 px-3 uppercase text-[11px] tracking-wide">Remarks &amp; Reason</th>
-                </tr>
-              </thead>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[860px] text-[12.5px]">
+                <thead>
+                  <tr className="bg-gray-50 border-b border-gray-200 text-gray-700 font-semibold text-left">
+                    <th className="sticky top-0 z-10 bg-gray-50 py-2.5 px-3 uppercase text-[11px] tracking-wide">Timestamp</th>
+                    <th className="sticky top-0 z-10 bg-gray-50 py-2.5 px-3 uppercase text-[11px] tracking-wide">Action</th>
+                    <th className="sticky top-0 z-10 bg-gray-50 py-2.5 px-3 uppercase text-[11px] tracking-wide">Test Reference</th>
+                    <th className="sticky top-0 z-10 bg-gray-50 py-2.5 px-3 uppercase text-[11px] tracking-wide">Authorized Officer</th>
+                    <th className="sticky top-0 z-10 bg-gray-50 py-2.5 px-3 uppercase text-[11px] tracking-wide">Role</th>
+                    <th className="sticky top-0 z-10 bg-gray-50 py-2.5 px-3 uppercase text-[11px] tracking-wide">Status Transition</th>
+                    <th className="sticky top-0 z-10 bg-gray-50 py-2.5 px-3 uppercase text-[11px] tracking-wide">Remarks &amp; Reason</th>
+                  </tr>
+                </thead>
               <tbody className="divide-y divide-gray-100">
                 {filteredHistory.map((item) => (
                   <tr key={item.id} className="hover:bg-blue-50/20 transition-colors">
@@ -206,6 +207,7 @@ export default function RepositoryPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </div>
       )}
@@ -213,16 +215,17 @@ export default function RepositoryPage() {
       {/* Tab 2: All Records */}
       {activeTab === 'records' && (
         <div className="bg-white border border-gray-200 rounded overflow-hidden shadow-2xs">
-          <table className="w-full text-[12.5px]">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[860px] text-[12.5px]">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200 text-gray-700 font-semibold text-left">
-                <th className="py-2.5 px-3 uppercase text-[11px] tracking-wide">Test Ref</th>
-                <th className="py-2.5 px-3 uppercase text-[11px] tracking-wide">Instrument Model &amp; Serial</th>
-                <th className="py-2.5 px-3 uppercase text-[11px] tracking-wide">Accuracy Class</th>
-                <th className="py-2.5 px-3 uppercase text-[11px] tracking-wide">Testing Officer</th>
-                <th className="py-2.5 px-3 uppercase text-[11px] tracking-wide">Reviewer</th>
-                <th className="py-2.5 px-3 uppercase text-[11px] tracking-wide">Current Status</th>
-                <th className="py-2.5 px-3 text-right uppercase text-[11px] tracking-wide">Actions</th>
+                <th className="sticky top-0 z-10 bg-gray-50 py-2.5 px-3 uppercase text-[11px] tracking-wide">Test Ref</th>
+                <th className="sticky top-0 z-10 bg-gray-50 py-2.5 px-3 uppercase text-[11px] tracking-wide">Instrument Model &amp; Serial</th>
+                <th className="sticky top-0 z-10 bg-gray-50 py-2.5 px-3 uppercase text-[11px] tracking-wide">Accuracy Class</th>
+                <th className="sticky top-0 z-10 bg-gray-50 py-2.5 px-3 uppercase text-[11px] tracking-wide">Testing Officer</th>
+                <th className="sticky top-0 z-10 bg-gray-50 py-2.5 px-3 uppercase text-[11px] tracking-wide">Reviewer</th>
+                <th className="sticky top-0 z-10 bg-gray-50 py-2.5 px-3 uppercase text-[11px] tracking-wide">Current Status</th>
+                <th className="sticky top-0 z-10 bg-gray-50 py-2.5 px-3 text-right uppercase text-[11px] tracking-wide">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -270,6 +273,7 @@ export default function RepositoryPage() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 

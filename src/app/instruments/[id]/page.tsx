@@ -21,177 +21,14 @@ import { Badge } from '@/components/ui/Badge';
 import { DataTable, type ColumnDef } from '@/components/ui/DataTable';
 import { TestStatusBadge, ComplianceBadge } from '@/components/ui/StatusBadge';
 import { FieldSet } from '@/components/ui/FormControls';
-import type { InstrumentClass, TestStatus, ComplianceVerdict } from '@/types';
-
-// ============================================================================
-// TYPES
-// ============================================================================
-
-interface InstrumentDetail {
-  id: string;
-  serialNumber: string;
-  assetTag?: string;
-  
-  // Model info
-  modelName: string;
-  modelNumber: string;
-  manufacturerName: string;
-  manufacturerCountry: string;
-  
-  // Technical specifications
-  instrumentType: string;
-  instrumentClass: InstrumentClass | null;
-  accuracyClass: string;
-  
-  // Capacity
-  maxCapacity: number;
-  maxCapacityUnit: string;
-  minCapacity: number;
-  minCapacityUnit: string;
-  
-  // Scale
-  scaleInterval: number;
-  scaleIntervalUnit: string;
-  verificationScaleInterval: number | null;
-  verificationScaleIntervalUnit: string | null;
-  numberOfVerificationIntervals: number | null;
-  
-  // Software
-  softwareVersion: string;
-  firmwareVersion: string;
-  powerSupply: string;
-  
-  // Laboratory
-  laboratoryId: string;
-  laboratoryCode: string;
-  laboratoryName: string;
-  
-  // Dates & condition
-  dateReceived: string;
-  lastCalibration: string | null;
-  nextCalibration: string | null;
-  condition: 'good' | 'needs-repair' | 'out-of-service';
-  
-  // Notes
-  notes: string;
-  
-  // Metadata
-  createdAt: string;
-  updatedAt: string;
-  createdBy: string;
-  testCount: number;
-}
-
-interface TestHistoryRecord {
-  id: string;
-  testNumber: string;
-  verificationType: string;
-  status: TestStatus;
-  complianceResult: ComplianceVerdict;
-  technician: string;
-  submittedAt: string | null;
-  completedAt: string | null;
-}
-
-// ============================================================================
-// MOCK DATA
-// ============================================================================
-
-const MOCK_INSTRUMENT: InstrumentDetail = {
-  id: '1',
-  serialNumber: 'WGH-2024-0891',
-  assetTag: 'NPL-DL-INST-001',
-  modelName: 'Acom 3000',
-  modelNumber: 'AC-3000',
-  manufacturerName: 'Acom Instruments',
-  manufacturerCountry: 'Germany',
-  instrumentType: 'electronic',
-  instrumentClass: 'III',
-  accuracyClass: 'M2',
-  maxCapacity: 3000,
-  maxCapacityUnit: 'kg',
-  minCapacity: 10,
-  minCapacityUnit: 'kg',
-  scaleInterval: 1,
-  scaleIntervalUnit: 'kg',
-  verificationScaleInterval: 1,
-  verificationScaleIntervalUnit: 'kg',
-  numberOfVerificationIntervals: 3000,
-  softwareVersion: 'v2.1.0',
-  firmwareVersion: 'v1.0.3',
-  powerSupply: '230V AC',
-  laboratoryId: '1',
-  laboratoryCode: 'NPL-DL-01',
-  laboratoryName: 'National Physical Laboratory — Delhi',
-  dateReceived: '2024-01-15',
-  lastCalibration: '2026-06-15',
-  nextCalibration: '2027-06-15',
-  condition: 'good',
-  notes: 'Primary instrument for Class III verification testing. Located in Testing Lab A.',
-  createdAt: '2024-01-15T10:00:00Z',
-  updatedAt: '2026-09-01T14:30:00Z',
-  createdBy: 'J. Rajagopal',
-  testCount: 24,
-};
-
-const MOCK_TEST_HISTORY: TestHistoryRecord[] = [
-  {
-    id: '1',
-    testNumber: 'TST-2026-001234',
-    verificationType: 'Initial',
-    status: 'completed',
-    complianceResult: 'compliant',
-    technician: 'J. Rajagopal',
-    submittedAt: '2026-09-02T14:30:00Z',
-    completedAt: '2026-09-03T10:00:00Z',
-  },
-  {
-    id: '2',
-    testNumber: 'TST-2026-001220',
-    verificationType: 'Subsequent',
-    status: 'completed',
-    complianceResult: 'compliant',
-    technician: 'P. Mehta',
-    submittedAt: '2026-08-15T11:00:00Z',
-    completedAt: '2026-08-16T09:00:00Z',
-  },
-  {
-    id: '3',
-    testNumber: 'TST-2026-001205',
-    verificationType: 'Initial',
-    status: 'completed',
-    complianceResult: 'non-compliant',
-    technician: 'J. Rajagopal',
-    submittedAt: '2026-07-20T16:00:00Z',
-    completedAt: '2026-07-21T14:00:00Z',
-  },
-  {
-    id: '4',
-    testNumber: 'TST-2026-001190',
-    verificationType: 'Subsequent',
-    status: 'completed',
-    complianceResult: 'compliant',
-    technician: 'S. Iyer',
-    submittedAt: '2026-06-10T09:00:00Z',
-    completedAt: '2026-06-11T15:00:00Z',
-  },
-  {
-    id: '5',
-    testNumber: 'TST-2026-001180',
-    verificationType: 'Initial',
-    status: 'completed',
-    complianceResult: 'compliant',
-    technician: 'J. Rajagopal',
-    submittedAt: '2026-05-05T10:00:00Z',
-    completedAt: '2026-05-06T12:00:00Z',
-  },
-];
+import { getInstrument, getInstrumentTestHistory, type InstrumentDetailRecord, type InstrumentTestHistoryRecord } from '@/lib/catalog-db';
+import type { TestStatus, ComplianceVerdict } from '@/types';
 
 // ============================================================================
 // COLUMN DEFINITIONS
 // ============================================================================
 
-const TEST_HISTORY_COLUMNS: ColumnDef<TestHistoryRecord>[] = [
+const TEST_HISTORY_COLUMNS: ColumnDef<InstrumentTestHistoryRecord>[] = [
   {
     key: 'testNumber',
     header: 'Test No.',
@@ -243,7 +80,7 @@ function DetailRow({ label, value, unit, mono = false }: {
 }) {
   return (
     <div className="flex items-baseline gap-2 py-1.5">
-      <span className="text-[12px] text-gray-500 w-[180px] shrink-0">{label}</span>
+      <span className="text-[12px] text-gray-500 w-[110px] sm:w-[180px] shrink-0">{label}</span>
       <span className={`text-[13px] text-gray-900 ${mono ? 'font-mono text-[12px]' : ''}`}>
         {value !== null && value !== undefined && value !== ''
           ? <>
@@ -264,14 +101,57 @@ function DetailRow({ label, value, unit, mono = false }: {
 export default function InstrumentDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const { id } = React.use(params);
-  const instrument = MOCK_INSTRUMENT;
-  const testHistory = MOCK_TEST_HISTORY;
+  const [instrument, setInstrument] = React.useState<InstrumentDetailRecord | null>(null);
+  const [testHistory, setTestHistory] = React.useState<InstrumentTestHistoryRecord[]>([]);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    getInstrument(id).then(async (record) => {
+      if (cancelled) return;
+      setInstrument(record);
+      if (record) {
+        const history = await getInstrumentTestHistory(id);
+        if (!cancelled) setTestHistory(history);
+      }
+      setLoading(false);
+    });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
 
   const conditionConfig = {
     good: { color: 'success' as const, label: 'Good' },
     'needs-repair': { color: 'warning' as const, label: 'Needs Repair' },
     'out-of-service': { color: 'danger' as const, label: 'Out of Service' },
   };
+
+  if (loading) {
+    return (
+      <Shell>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-[13px] text-gray-500">Loading instrument…</div>
+        </div>
+      </Shell>
+    );
+  }
+
+  if (!instrument) {
+    return (
+      <Shell breadcrumbs={[{ label: 'Instruments', href: '/instruments' }, { label: 'Not Found', current: true }]}>
+        <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
+          <h2 className="text-[16px] font-semibold text-gray-900 mb-2">Instrument Not Found</h2>
+          <p className="text-[13px] text-gray-600 mb-4">
+            No instrument matches the requested record.
+          </p>
+          <Link href="/instruments" className="px-4 py-2 bg-primary-600 text-white rounded-md text-[13px] font-medium hover:bg-primary-700">
+            ← Back to Instruments
+          </Link>
+        </div>
+      </Shell>
+    );
+  }
 
   return (
     <Shell breadcrumbs={[
@@ -302,7 +182,7 @@ export default function InstrumentDetailPage({ params }: { params: Promise<{ id:
             </Badge>
           )}
           <span className="text-[12px] text-gray-500">
-            {instrument.testCount} test{instrument.testCount !== 1 ? 's' : ''} recorded
+            {testHistory.length} test{testHistory.length !== 1 ? 's' : ''} recorded
           </span>
         </div>
       </PageHeader>
@@ -367,7 +247,10 @@ export default function InstrumentDetailPage({ params }: { params: Promise<{ id:
           <FieldSet legend="Dates & Calibration">
             <DetailRow
               label="Date Received"
-              value={new Date(instrument.dateReceived).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+              value={instrument.dateReceived
+                ? new Date(instrument.dateReceived).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+                : null
+              }
             />
             <DetailRow
               label="Last Calibration"

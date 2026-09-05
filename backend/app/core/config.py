@@ -38,6 +38,13 @@ class Settings(BaseSettings):
     
     # Storage
     STORAGE_BUCKET: str = "nawi-attachments"
+
+    # SMTP (outbound notifications — optional)
+    SMTP_EMAIL: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 465
+    SMTP_FROM_NAME: str = "NAWI TestFlow"
     
     # CORS — comma-separated in env, e.g.
     # CORS_ORIGINS="http://localhost:3000,https://nawi-testflow.vercel.app"

@@ -47,6 +47,7 @@ export function Dialog({ open, onClose, title, children, size = 'md' }: DialogPr
     <dialog
       ref={dialogRef}
       className={cn(
+        'fixed left-1/2 top-1/2 m-0 w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2',
         'rounded-lg shadow-overlay backdrop:bg-gray-950/50',
         'border border-gray-200 p-0',
         sizeStyles[size],

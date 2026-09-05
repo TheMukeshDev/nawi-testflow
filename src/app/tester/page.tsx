@@ -207,26 +207,27 @@ export default function TesterDashboard() {
                   : 'No active tests. Start a new test report to begin.'}
               </div>
             ) : (
-              <table className="w-full text-[13px]">
-                <thead>
-                  <tr className="border-b border-gray-200 bg-gray-50">
-                    <th className="px-3 py-2 text-left font-semibold text-gray-700 text-[11px] uppercase tracking-wide">
-                      Test Ref
-                    </th>
-                    <th className="px-3 py-2 text-left font-semibold text-gray-700 text-[11px] uppercase tracking-wide">
-                      Instrument
-                    </th>
-                    <th className="px-3 py-2 text-left font-semibold text-gray-700 text-[11px] uppercase tracking-wide">
-                      Status
-                    </th>
-                    <th className="px-3 py-2 text-left font-semibold text-gray-700 text-[11px] uppercase tracking-wide">
-                      Last Updated
-                    </th>
-                    <th className="px-3 py-2 text-right font-semibold text-gray-700 text-[11px] uppercase tracking-wide">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[720px] text-[13px]">
+                  <thead>
+                    <tr className="border-b border-gray-200 bg-gray-50">
+                      <th className="sticky top-0 z-10 bg-gray-50 px-3 py-2 text-left font-semibold text-gray-700 text-[11px] uppercase tracking-wide">
+                        Test Ref
+                      </th>
+                      <th className="sticky top-0 z-10 bg-gray-50 px-3 py-2 text-left font-semibold text-gray-700 text-[11px] uppercase tracking-wide">
+                        Instrument
+                      </th>
+                      <th className="sticky top-0 z-10 bg-gray-50 px-3 py-2 text-left font-semibold text-gray-700 text-[11px] uppercase tracking-wide">
+                        Status
+                      </th>
+                      <th className="sticky top-0 z-10 bg-gray-50 px-3 py-2 text-left font-semibold text-gray-700 text-[11px] uppercase tracking-wide">
+                        Last Updated
+                      </th>
+                      <th className="sticky top-0 z-10 bg-gray-50 px-3 py-2 text-right font-semibold text-gray-700 text-[11px] uppercase tracking-wide">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
                 <tbody>
                   {visibleActive.map((t) => (
                     <tr key={t.id} className="border-b border-gray-100 hover:bg-gray-50/60 transition-colors">
@@ -273,7 +274,8 @@ export default function TesterDashboard() {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+                </table>
+              </div>
             )}
           </div>
         </div>
@@ -289,26 +291,27 @@ export default function TesterDashboard() {
                   : 'No completed test reports yet.'}
               </div>
             ) : (
-              <table className="w-full text-[13px]">
-                <thead>
-                  <tr className="border-b border-gray-200 bg-gray-50">
-                    <th className="px-3 py-2 text-left font-semibold text-gray-700 text-[11px] uppercase tracking-wide">
-                      Test Ref
-                    </th>
-                    <th className="px-3 py-2 text-left font-semibold text-gray-700 text-[11px] uppercase tracking-wide">
-                      Instrument
-                    </th>
-                    <th className="px-3 py-2 text-left font-semibold text-gray-700 text-[11px] uppercase tracking-wide">
-                      Approved By
-                    </th>
-                    <th className="px-3 py-2 text-left font-semibold text-gray-700 text-[11px] uppercase tracking-wide">
-                      Compliance
-                    </th>
-                    <th className="px-3 py-2 text-right font-semibold text-gray-700 text-[11px] uppercase tracking-wide">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[720px] text-[13px]">
+                  <thead>
+                    <tr className="border-b border-gray-200 bg-gray-50">
+                      <th className="sticky top-0 z-10 bg-gray-50 px-3 py-2 text-left font-semibold text-gray-700 text-[11px] uppercase tracking-wide">
+                        Test Ref
+                      </th>
+                      <th className="sticky top-0 z-10 bg-gray-50 px-3 py-2 text-left font-semibold text-gray-700 text-[11px] uppercase tracking-wide">
+                        Instrument
+                      </th>
+                      <th className="sticky top-0 z-10 bg-gray-50 px-3 py-2 text-left font-semibold text-gray-700 text-[11px] uppercase tracking-wide">
+                        Approved By
+                      </th>
+                      <th className="sticky top-0 z-10 bg-gray-50 px-3 py-2 text-left font-semibold text-gray-700 text-[11px] uppercase tracking-wide">
+                        Compliance
+                      </th>
+                      <th className="sticky top-0 z-10 bg-gray-50 px-3 py-2 text-right font-semibold text-gray-700 text-[11px] uppercase tracking-wide">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
                 <tbody>
                   {visibleCompleted.map((t) => (
                     <tr key={t.id} className="border-b border-gray-100 hover:bg-gray-50/60 transition-colors">
@@ -351,7 +354,8 @@ export default function TesterDashboard() {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+                </table>
+              </div>
             )}
           </div>
         </div>

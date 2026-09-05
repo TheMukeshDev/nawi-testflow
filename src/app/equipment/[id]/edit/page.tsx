@@ -8,6 +8,7 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Shell } from '@/components/layout/Shell';
 import { PageHeader } from '@/components/layout/PageHeader';
@@ -19,37 +20,58 @@ import {
   type EquipmentFormData,
   type EquipmentFormErrors,
 } from '@/components/forms/EquipmentForm';
+import { getEquipment } from '@/lib/equipment-catalog';
+import { getLaboratoryOptions, type FormLaboratory } from '@/lib/catalog-db';
 
-const MOCK_LABORATORIES = [
-  { id: '1', name: 'National Physical Laboratory — Delhi', code: 'NPL-DL-01' },
-  { id: '2', name: 'National Physical Laboratory — Mumbai', code: 'NPL-MH-02' },
-];
-
-const MOCK_EQUIPMENT_DATA: EquipmentFormData = {
-  equipmentId: 'WTS-E2-001',
-  name: 'E2 Calibration Weight Set',
-  type: 'standard-weight',
-  manufacturer: 'Sartorius',
-  model: 'PTA',
-  serialNumber: 'WTS-E2-001',
-  calibrationDate: '2026-03-15',
-  calibrationValidUntil: '2027-03-15',
-  calibrationCertificateRef: 'CAL-2026-00123',
-  laboratoryId: '1',
-  condition: 'good',
-  notes: 'Primary E2 weight set for Class II and Class III verification testing.',
+const TYPE_MAP: Record<string, EquipmentFormData['type']> = {
+  'Standard Weight': 'standard-weight',
+  'Calibrated Weight': 'calibrated-weight',
+  'Measurement Device': 'measurement-device',
+  Accessory: 'accessory',
+  Tool: 'tool',
 };
+
+function toFormData(equipment: Awaited<ReturnType<typeof getEquipment>>): EquipmentFormData | null {
+  if (!equipment) return null;
+  return {
+    equipmentId: equipment.equipmentId,
+    name: equipment.name,
+    type: TYPE_MAP[equipment.type] ?? 'standard-weight',
+    manufacturer: equipment.manufacturer === '—' ? '' : equipment.manufacturer,
+    model: equipment.model === '—' ? '' : equipment.model,
+    serialNumber: equipment.serialNumber,
+    calibrationDate: equipment.calibrationDate,
+    calibrationValidUntil: equipment.calibrationValidUntil,
+    calibrationCertificateRef: equipment.calibrationCertificateRef,
+    laboratoryId: equipment.laboratoryId,
+    condition: equipment.condition,
+    notes: equipment.notes,
+  };
+}
 
 export default function EditEquipmentPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const { id } = React.use(params);
-  const [formData, setFormData] = React.useState<EquipmentFormData>(MOCK_EQUIPMENT_DATA);
+  const [formData, setFormData] = React.useState<EquipmentFormData | null>(null);
+  const [laboratories, setLaboratories] = React.useState<FormLaboratory[]>([]);
   const [errors, setErrors] = React.useState<EquipmentFormErrors>({});
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [submitError, setSubmitError] = React.useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = React.useState(false);
 
+  React.useEffect(() => {
+    let cancelled = false;
+    Promise.all([Promise.resolve(getEquipment(id)), getLaboratoryOptions()]).then(([equipment, labs]) => {
+      if (cancelled) return;
+      setFormData(toFormData(equipment));
+      setLaboratories(labs);
+    });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
   const handleSubmit = async () => {
+    if (!formData) return;
     const validationErrors = validateEquipment(formData);
     setErrors(validationErrors);
 
@@ -73,6 +95,22 @@ export default function EditEquipmentPage({ params }: { params: Promise<{ id: st
       setIsSubmitting(false);
     }
   };
+
+  if (!formData) {
+    return (
+      <Shell breadcrumbs={[{ label: 'Equipment', href: '/equipment' }, { label: 'Edit', current: true }]}>
+        <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
+          <h2 className="text-[16px] font-semibold text-gray-900 mb-2">Equipment Not Found</h2>
+          <p className="text-[13px] text-gray-600 mb-4">
+            No equipment matches the requested record.
+          </p>
+          <Link href="/equipment" className="px-4 py-2 bg-primary-600 text-white rounded-md text-[13px] font-medium hover:bg-primary-700">
+            ← Back to Equipment
+          </Link>
+        </div>
+      </Shell>
+    );
+  }
 
   return (
     <Shell breadcrumbs={[
@@ -108,7 +146,7 @@ export default function EditEquipmentPage({ params }: { params: Promise<{ id: st
           onChange={setFormData}
           onSubmit={handleSubmit}
           onCancel={() => router.push(`/equipment/${id}`)}
-          laboratories={MOCK_LABORATORIES}
+          laboratories={laboratories}
           isLoading={isSubmitting}
           isEdit
         />

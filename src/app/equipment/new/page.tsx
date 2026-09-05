@@ -10,6 +10,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Shell } from '@/components/layout/Shell';
 import { PageHeader } from '@/components/layout/PageHeader';
+import { RouteGuard } from '@/components/auth/RouteGuard';
 import {
   EquipmentForm,
   validateEquipment,
@@ -19,19 +20,24 @@ import {
   type EquipmentFormErrors,
 } from '@/components/forms/EquipmentForm';
 import { Alert } from '@/components/ui/Alert';
-
-const MOCK_LABORATORIES = [
-  { id: '1', name: 'Central Metrology Testing Lab', code: 'CMTL-PY-01' },
-  { id: '2', name: 'Prayagraj Instrument Testing Lab', code: 'PITL-PR-02' },
-];
+import { getLaboratoryOptions, type FormLaboratory } from '@/lib/catalog-db';
 
 export default function NewEquipmentPage() {
   const router = useRouter();
   const [formData, setFormData] = useState<EquipmentFormData>(getInitialEquipment());
   const [errors, setErrors] = useState<EquipmentFormErrors>({});
+  const [laboratories, setLaboratories] = useState<FormLaboratory[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    getLaboratoryOptions().then((labs) => {
+      if (!cancelled) setLaboratories(labs);
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   const handleSubmit = async () => {
     const validationErrors = validateEquipment(formData);
@@ -59,6 +65,7 @@ export default function NewEquipmentPage() {
   };
 
   return (
+    <RouteGuard requiredRoles={['admin', 'tester']}>
     <Shell breadcrumbs={[
       { label: 'Equipment', href: '/equipment' },
       { label: 'Register New', current: true },
@@ -91,10 +98,11 @@ export default function NewEquipmentPage() {
           onChange={setFormData}
           onSubmit={handleSubmit}
           onCancel={() => router.push('/equipment')}
-          laboratories={MOCK_LABORATORIES}
+          laboratories={laboratories}
           isLoading={isSubmitting}
         />
       </div>
     </Shell>
+    </RouteGuard>
   );
 }
