@@ -1,13 +1,9 @@
 /**
  * NAWI TestFlow — AI / explanation client helpers.
  *
- * Two-tier strategy:
- *  - Tier 1 (default): rule-based explanations, computed locally AND/OR via
- *    backend /ai/explain-rule etc. No API key, zero AI cost.
- *  - Tier 2 (on-demand): Gemini "Enhance with AI", only when the user clicks
- *    explicitly AND a key is configured (personal key in user Settings, or
- *    admin global key). Personal key is sent per-request via X-Gemini-Key and
- *    never stored server-side for non-admins.
+ * Deterministic rule-based explanation helpers used by the current MVP.
+ * Gemini integration remains isolated here for future scope and is not exposed
+ * by the current product UI.
  */
 
 const API_BASE =

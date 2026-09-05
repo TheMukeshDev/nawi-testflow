@@ -153,7 +153,7 @@ export default function UserGuidePage() {
               { title: 'Enter Observations (Step 4)', detail: 'For each selected test, enter the measured values. Each reading field has its unit displayed. Add notes for each test.' },
               { title: 'Calculate & Review (Step 5)', detail: 'The system automatically calculates mean and standard deviation for each test. Review the calculated results and PASS/FAIL status.' },
               { title: 'Read rule-based explanations (Step 5)', detail: 'Each result shows Why this result: the actual formula, observed vs allowed values, margin, and why it passed or failed. This needs no API key.' },
-              { title: 'Enhance with AI (optional)', detail: 'Click Enhance with AI for a plain-language rephrasing. Works only after you add a Gemini key in Settings; the verdict never changes.' },
+              { title: 'AI assistance', detail: 'AI assistance is currently disabled. Deterministic rule-based explanations are available with each calculated result.' },
               { title: 'Review Summary (Step 6)', detail: 'Review the complete test record — instrument, conditions, and results — before submission.' },
               { title: 'Submit for Review', detail: 'Click "Submit for Review" to send the report to a reviewer. The status changes to PENDING_REVIEW.' },
             ]} />
@@ -283,7 +283,7 @@ export default function UserGuidePage() {
               { title: 'Filter by role', detail: 'Use the role dropdown to filter users by Administrator, Tester, Reviewer, or Viewer.' },
               { title: 'Edit user', detail: 'Click Edit to modify a user\'s role or laboratory assignment.' },
               { title: 'Activate/Deactivate', detail: 'Deactivate a user to prevent login without deleting their account.' },
-              { title: 'Configure AI assistance (global)', detail: 'In System Settings, enable Gemini, pick the model, and paste the global API key. This enables Enhance with AI for all users.' },
+              { title: 'AI assistance', detail: 'AI configuration is reserved for a future product scope and is not available in the current MVP.' },
               { title: 'Edit system settings', detail: 'Admins can also edit upload size, session timeout, and report prefix directly in System Settings.' },
             ]} />
           </SubSection>

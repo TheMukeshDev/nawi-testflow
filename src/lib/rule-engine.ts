@@ -156,6 +156,19 @@ export interface VersionFilter {
   standardVersion?: string;
 }
 
+function configuredVersion(): string | undefined {
+  if (typeof window === 'undefined') return undefined;
+  try {
+    const raw = window.localStorage.getItem('nawi_admin_sys_settings');
+    if (!raw) return undefined;
+    const settings = JSON.parse(raw) as { key?: string; value?: string }[];
+    const setting = settings.find(item => item.key === 'rule_version');
+    return setting?.value?.trim() || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export function isMassUnit(unit: string): boolean {
   return ['g', 'mg', 'kg', 'lb', 't'].includes(String(unit).toLowerCase());
 }
@@ -178,8 +191,13 @@ export async function resolveActiveVersion(opts?: VersionFilter): Promise<Active
       rowCount: 0,
     };
   }
+  const selectedVersion = configuredVersion();
   const version =
-    opts?.standardVersion && versions.includes(opts.standardVersion) ? opts.standardVersion : versions[0];
+    opts?.standardVersion && versions.includes(opts.standardVersion)
+      ? opts.standardVersion
+      : selectedVersion && versions.includes(selectedVersion)
+        ? selectedVersion
+        : versions[0];
   return { standard: opts?.standard || DEFAULT_STANDARD, standardVersion: version, source: 'db', rowCount: scoped.length };
 }
 
