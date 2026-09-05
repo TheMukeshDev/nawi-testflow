@@ -387,10 +387,7 @@ export default function AdminUsersPage() {
               label="Laboratory"
               value={formData.laboratory}
               onChange={e => setFormData({ ...formData, laboratory: e.target.value })}
-              options={[
-                { label: 'Select laboratory…', value: '' },
-                ...labOptions,
-              ]}
+              options={labOptions}
             />
             <div className="flex items-center justify-end gap-2 pt-2">
               <Button variant="secondary" size="md" onClick={() => setModalOpen(false)}>
