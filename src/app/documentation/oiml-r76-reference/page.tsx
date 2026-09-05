@@ -6,6 +6,12 @@ import { DocLayout, Callout, CodeBlock, DocSection, DocSubSection, DocTable } fr
 export default function OIMLR76ReferencePage() {
   return (
     <DocLayout title="OIML R-76 Reference" subtitle="Reference information on how test procedures, calculations and compliance rules are represented in the NAWI TestFlow application.">
+      <Callout type="danger" title="DEMO RULES — NOT FOR REGULATORY USE">
+        <strong>Methodology: official.</strong> This project implements the official OIML R-76 test procedures and compliance-evaluation methodology (repeatability, eccentricity, linearity, discrimination and stability), including versioned rule handling.
+        <br /><br />
+        <strong>Limits: demonstration only.</strong> Every numeric rule limit configured in this MVP is a <em>demonstration value</em>, stored in the database and flagged with <code>is_demo_rule = true</code>. They are NOT official OIML R-76 limits and must not be used for actual compliance determinations without verification against authoritative sources.
+      </Callout>
+
       <Callout type="warning" title="Disclaimer">
         Reference information shown here describes how the application represents and processes OIML R-76-related testing information. This document is NOT a replacement for the official OIML recommendation. Authoritative requirements must be verified against the applicable official standard/document.
       </Callout>
@@ -144,11 +150,12 @@ Reason: "0.0837 d is within the 0.5 d limit for Class III instruments (RPT-III-0
       <DocSection id="compliance-rule-configuration" title="Compliance Rule Configuration">
         <p>Compliance rules are stored in a structured format that separates regulatory logic from the UI and calculation code.</p>
         <DocSubSection title="Rule Structure">
+          <p>Each rule record follows the OIML R-76 evaluation methodology but carries an explicit demo flag in the database. The example below shows the record shape used for a <strong>demo</strong> rule.</p>
           <CodeBlock language="json">{`{
   "standard": "OIML R-76",
-  "standard_version": "2009",
+  "standard_version": "DEMO-2026.01",
   "rule_id": "RPT-III-001",
-  "rule_version": "v2009",
+  "rule_version": "vDEMO-2026.01",
   "test_code": "RPT",
   "instrument_class": "III",
   "applicability": "All NAWI Class III instruments",
@@ -158,6 +165,9 @@ Reason: "0.0837 d is within the 0.5 d limit for Class III instruments (RPT-III-0
   "decision_logic": "calculated_value <= applicable_limit",
   "is_demo_rule": true
 }`}</CodeBlock>
+          <Callout type="warning" title="Demo value">
+            The <code>applicable_limit</code> shown in this example is a demonstration value stored in the MVP database. It accompanies the official OIML R-76 evaluation logic but must be verified against authoritative sources before any regulatory use.
+          </Callout>
         </DocSubSection>
         <DocSubSection title="Demo Rules (Current MVP)">
           <Callout type="warning" title="DEMO RULES - NOT FOR REGULATORY USE">
@@ -174,7 +184,9 @@ Reason: "0.0837 d is within the 0.5 d limit for Class III instruments (RPT-III-0
 
       <DocSection id="rule-versioning" title="Rule Versioning">
         <p>The rule versioning system ensures that historical test reports always retain the exact rule version used when their compliance was evaluated.</p>
-        <CodeBlock language="text">{`OIML R-76
+        <Callout type="note" title="Illustrative demo limits">
+          The numeric limits in the diagram below are DEMO values shown for illustration only — they are not official OIML R-76 limits. The versioning mechanism illustrated (effective dates, newest-version selection, immutability of finalized reports) is exactly how the application loads, pins and reproduces rule versions for each report.
+        </Callout>        <CodeBlock language="text">{`OIML R-76
   |
   +-- Version 2009 (Effective: 01 Jan 2009)
   |    +-- RPT limit: 0.5d (Class III)
