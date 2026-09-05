@@ -158,7 +158,7 @@ The documentation includes searchable content, sidebar navigation, and is respon
 - **Compliance Engine** — Versioned rule evaluation with PASS/FAIL determination
 - **Report Engine** — PDF generation (ReportLab) and DOCX generation (python-docx), served from live Supabase data
 - **Explanation Engine** — Deterministic rule-based explainer (actual formula, observed vs allowed, margin/excess, why pass/fail) shown first at zero AI cost
-- **AI Assistance** — Optional on-demand Gemini rephrasing, grounded in the actual resolved rule (enabled only with an API key from Settings)
+- **AI Assistance** — Reserved for future scope; the current MVP uses deterministic rule-based explanations only
 
 ## Project Structure
 
@@ -495,19 +495,19 @@ Result
 
 The MVP includes demonstration rules for presentation purposes. These rules are clearly marked and must not be used for actual regulatory compliance decisions.
 
-## AI Architecture — Two Tiers (Rule-First, Gemini On-Demand)
+## AI Architecture — Future Scope
 
 To keep AI usage (and cost) minimal, explanations work in two tiers:
 
-**Tier 1 — Rule-based (default, always available, zero AI cost):**
+AI-assisted rephrasing is currently disabled in the product UI. The current MVP provides deterministic rule-based explanations only:
 
 - Every result shows the actual formula executed, observed vs allowed values, margin/excess, and *why* it passed/failed
 - Process walkthroughs ("how this test works") and report summaries are computed deterministically from compliance data
 - Needs no API key and makes no network calls (`backend/engine/rule_explainer.py`)
 
-**Tier 2 — Gemini enhancement (explicit click only):**
+Future scope — Gemini enhancement:
 
-- The "Enhance with AI" button sends the *already-resolved rule* (rule ID + version, formula, observed/allowed values, immutable verdict) to Gemini for a plain-language rephrasing only
+- A future version may add an "Enhance with AI" action that sends the *already-resolved rule* to Gemini for plain-language rephrasing only
 - Gemini is called **only** when the user clicks, **only** when a key is configured, and **only** when the feature is enabled
 - Without a key, the UI shows the complete rule-based result plus a pointer to Settings instead of calling AI
 

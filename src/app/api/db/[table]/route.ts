@@ -1,7 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://zsjxiwmofjndlccedjtc.supabase.co';
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+// Server-side access MUST use a service-role key: with the anon key and no
+// authenticated user JWT, Supabase RLS returns zero rows for tables that
+// require auth.uid() (e.g. instruments, profiles), making every page look
+// empty. Accept all common env names so any deployment picks it up.
+const SUPABASE_KEY =
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  process.env.SUPABASE_SERVICE_KEY ||
+  process.env.SUPABASE_KEY ||
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+  '';
 
 const HEADERS = {
   'apikey': SUPABASE_KEY,
@@ -29,6 +38,19 @@ const ALLOWED_TABLES = new Set([
   'report_versions',
 ]);
 
+function keyNotConfigured(): NextResponse {
+  return NextResponse.json(
+    {
+      error: 'Database access key is not configured. Set SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_SERVICE_KEY) as a server-side environment variable.',
+    },
+    { status: 500 }
+  );
+}
+
+function isConfigured(): boolean {
+  return Boolean(SUPABASE_KEY);
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ table: string }> }
@@ -36,6 +58,9 @@ export async function GET(
   const { table } = await params;
   if (!ALLOWED_TABLES.has(table)) {
     return NextResponse.json({ error: 'Table not allowed' }, { status: 400 });
+  }
+  if (!isConfigured()) {
+    return keyNotConfigured();
   }
 
   const { searchParams } = new URL(request.url);
@@ -68,6 +93,9 @@ export async function POST(
   const { table } = await params;
   if (!ALLOWED_TABLES.has(table)) {
     return NextResponse.json({ error: 'Table not allowed' }, { status: 400 });
+  }
+  if (!isConfigured()) {
+    return keyNotConfigured();
   }
 
   try {
@@ -107,6 +135,9 @@ export async function PATCH(
   if (!id) {
     return NextResponse.json({ error: 'Query parameter "id" is required for PATCH' }, { status: 400 });
   }
+  if (!isConfigured()) {
+    return keyNotConfigured();
+  }
 
   try {
     const body = await request.json();
@@ -144,6 +175,9 @@ export async function DELETE(
 
   if (!id) {
     return NextResponse.json({ error: 'Query parameter "id" is required for DELETE' }, { status: 400 });
+  }
+  if (!isConfigured()) {
+    return keyNotConfigured();
   }
 
   try {

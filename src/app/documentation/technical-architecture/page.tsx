@@ -242,8 +242,8 @@ Decision: PASS / FAIL / NOT_APPLICABLE / INCOMPLETE / RULE_NOT_CONFIGURED`}</Cod
         <Callout type="warning" title="Rule Not Configured">If a required compliance rule does not exist for a given test code and instrument class, the system returns RULE_NOT_CONFIGURED. It never guesses or fabricates a regulatory value.</Callout>
       </Section>
 
-      <Section id="explanation-ai" title="Explanation & AI Assistance (Two-Tier)">
-        <p>Explanations are rule-first. Tier 1 is deterministic and always available; Tier 2 (Gemini) only rephrases on explicit user request.</p>
+      <Section id="explanation-ai" title="Explanation Engine and Future AI Scope">
+        <p>Explanations are deterministic and based on the active configured rule. AI assistance is disabled in the current MVP and remains future scope.</p>
         <CodeBlock language="text">{`Compliance Decision (authoritative)
   |
 Tier 1 — Rule-based explainer (engine/rule_explainer.py, zero AI cost)
@@ -251,7 +251,7 @@ Tier 1 — Rule-based explainer (engine/rule_explainer.py, zero AI cost)
   |  endpoints: POST /ai/explain-rule, POST /ai/summarize-rule,
   |             GET /ai/process/{test_code}  (no key needed)
   |
-Tier 2 — Gemini enhancement ("Enhance with AI" click only)
+Future scope — Gemini enhancement (not enabled in the current MVP)
    |  prompt grounded in the resolved rule (ID, version, formula,
    |  values, immutable verdict) — never invents limits or verdicts
    |  requires: feature enabled AND API key in Settings`}</CodeBlock>
@@ -382,7 +382,7 @@ FastAPI Backend (Vercel serverless, api.index:app)
             ['SUPABASE_SERVICE_ROLE_KEY', 'Backend only', 'Supabase admin key (never in frontend)'],
             ['DATABASE_URL', 'Backend only', 'Direct PostgreSQL connection string'],
             ['CORS_ORIGINS', 'Backend only', 'Comma-separated frontend origins (deployed URL must be listed)'],
-            ['GEMINI_API_KEY', 'Backend only', 'Optional: enables on-demand Enhance with AI'],
+            ['GEMINI_API_KEY', 'Backend only', 'Reserved for future AI scope; disabled in the current MVP'],
             ['GEMINI_MODEL', 'Backend only', 'Optional: gemini-2.0-flash / 2.5-flash / 3.8-flash'],
             ['AI_ASSISTANCE_ENABLED', 'Backend only', 'Optional kill-switch (admin can also toggle in UI)'],
           ]} />

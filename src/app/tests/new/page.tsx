@@ -13,7 +13,6 @@ import Link from 'next/link';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { RouteGuard } from '@/components/auth/RouteGuard';
 import { useAuth } from '@/lib/auth-context';
-import { AiAssistBox } from '@/components/ai/AiAssistBox';
 import { localExplain } from '@/lib/ai';
 import { todayISO } from '@/lib/dates';
 import { workflowStore, type StoredTest } from '@/lib/workflow-store';
@@ -591,9 +590,7 @@ export default function NewTestPage() {
     }
   };
 
-  // Rule-based explanations (no AI — computed from the real engine values +
-  // the resolved rule reference). Gemini is only used when the user clicks
-  // "Enhance with AI" inside AiAssistBox.
+  // Deterministic explanations computed from the real engine values and rule.
   const explanations = useMemo(() => {
     if (!calcResult) return [];
     return calcResult.map((r) => {
@@ -616,7 +613,7 @@ export default function NewTestPage() {
         standard_version: r.standardVersion,
         explanations: [],
       };
-      return { decisionData, explanation: localExplain(decisionData) };
+      return { explanation: localExplain(decisionData) };
     });
   }, [calcResult]);
 
@@ -1444,13 +1441,19 @@ export default function NewTestPage() {
                 </p>
               </div>
             )}
-            {/* Rule-first explanations: why each result passed/failed (no AI).
-                "Enhance with AI" inside each box is the ONLY Gemini call site. */}
+            {/* Deterministic rule explanations for each result. */}
             {calcResult && calcResult.length > 0 && (
               <div className="mt-4 space-y-3">
-                <h3 className="text-[13px] font-semibold text-gray-900">Result explanations <span className="font-normal text-gray-400">— rule-based first, AI optional</span></h3>
+                <h3 className="text-[13px] font-semibold text-gray-900">Result explanations <span className="font-normal text-gray-400">— based on the active rule</span></h3>
                 {explanations.map((e, i) => (
-                  <AiAssistBox key={i} decisionData={e.decisionData} ruleExplanation={e.explanation as never} compact />
+                  <div key={i} className="border border-gray-200 rounded-sm p-3">
+                    <p className="text-[12px] font-medium text-gray-900">{e.explanation?.headline}</p>
+                    <p className="text-[12px] text-gray-600 leading-relaxed mt-1">{e.explanation?.why}</p>
+                    <div className="mt-2 text-[11px] text-gray-500 bg-gray-50 border border-gray-100 rounded-sm p-2 font-mono">
+                      <div>Formula: {e.explanation?.formula}</div>
+                      <div className="mt-1">Rule: {e.explanation?.decision_rule}</div>
+                    </div>
+                  </div>
                 ))}
               </div>
             )}

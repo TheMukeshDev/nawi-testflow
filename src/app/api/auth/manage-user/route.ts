@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { sendWelcomeUserEmail } from '@/lib/email-service';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
 const AUTH_HEADERS = {
   'apikey': SUPABASE_KEY,
@@ -53,18 +53,26 @@ export async function POST(request: NextRequest) {
       const authUser = await authRes.json();
       authUserId = authUser?.id || null;
     } else {
-      // User may already exist — try to find them
+      // The auth create failed. Determine WHY: if the email already has an
+      // auth account, we must NOT reuse it — the generated password would not
+      // match, and login would return "Invalid email or password".
       const errText = await authRes.text();
       const existing = await lookupUserByEmail(email);
       if (existing?.id) {
-        authUserId = existing.id;
-      } else {
-        console.error('[ManageUser] Auth create failed:', errText);
+        return NextResponse.json(
+          {
+            error: `An account with email ${email} already exists. Use a different email, or reset that account's password instead of creating a new one.`,
+          },
+          { status: 409 }
+        );
       }
-    }
-
-    if (!authUserId) {
-      return NextResponse.json({ error: `Failed to create auth user: user may already exist` }, { status: 409 });
+      console.error('[ManageUser] Auth create failed:', errText);
+      return NextResponse.json(
+        {
+          error: `Failed to create the login account for ${email}. Verify that a Supabase service-role key is configured server-side (SUPABASE_SERVICE_ROLE_KEY / SUPABASE_SERVICE_KEY) and try again.`,
+        },
+        { status: 500 }
+      );
     }
 
     // 2. Resolve laboratory (UUID) — accept either a lab id or a code
